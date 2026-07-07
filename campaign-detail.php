@@ -557,11 +557,6 @@ include __DIR__ . '/includes/header.php';
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-@keyframes successPop {
-    0%   { transform: scale(0.3); opacity: 0; }
-    70%  { transform: scale(1.1); }
-    100% { transform: scale(1);   opacity: 1; }
-}
 .donation-modal .modal-header {
     display: flex;
     justify-content: space-between;
@@ -1163,29 +1158,6 @@ footer, .footer, .site-footer, #footer {
       <p style="font-size:.84rem;color:#94a3b8;">Check your phone for the mobile money request</p>
     </div>
 
-    <!-- ── Success State ── -->
-    <div id="modalSuccess" style="display:none;text-align:center;padding:32px 8px;">
-      <!-- Animated checkmark -->
-      <div style="width:80px;height:80px;background:linear-gradient(135deg,var(--green),var(--green-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(26,122,60,.3);animation:successPop .4s cubic-bezier(.34,1.56,.64,1) both;">
-        <i class="fas fa-check" style="font-size:2.2rem;color:#fff;"></i>
-      </div>
-      <h3 style="color:var(--green-dark);font-weight:900;font-size:1.35rem;margin-bottom:6px;letter-spacing:-.02em;">Payment Sent! 🎉</h3>
-      <p style="color:#64748b;font-size:.9rem;margin-bottom:6px;">
-        Your donation of <strong id="successAmount" style="color:var(--green-dark);">UGX 0</strong> is being processed.
-      </p>
-      <p style="color:#94a3b8;font-size:.82rem;margin-bottom:24px;">Check your phone for the mobile money prompt and enter your PIN to complete.</p>
-
-      <!-- Countdown bar -->
-      <div style="background:var(--gray-100);border-radius:99px;height:5px;overflow:hidden;margin:0 auto 16px;max-width:220px;">
-        <div id="successBar" style="height:100%;background:var(--green);border-radius:99px;width:100%;transition:width 5s linear;"></div>
-      </div>
-      <p style="font-size:.78rem;color:#94a3b8;margin-bottom:20px;" id="successCountdown">Payment prompt sent — enter your PIN on your phone.</p>
-
-      <button class="modal-submit-btn" id="modalDoneBtn" style="max-width:260px;margin:0 auto;">
-        <i class="fas fa-check"></i> Done — Back to Drive
-      </button>
-    </div>
-
   </div>
 </div>
 
@@ -1421,10 +1393,8 @@ document.getElementById('modalSubmitBtn').addEventListener('click', async functi
         document.getElementById('modalLoading').style.display = 'none';
 
         if (data.success && data.pending) {
-            // Show success state, poll in background, reload givers when confirmed
-            document.getElementById('successAmount').textContent = 'UGX ' + parseInt(amount).toLocaleString();
-            document.getElementById('modalSuccess').style.display = 'block';
-            startSuccessCountdown(data.donation_id);
+            // Redirect to donation_success.php which has proper polling
+            window.location.href = '<?= BASE ?>/donation_success.php?donation_id=' + data.donation_id + '&status=pending';
         } else {
             document.getElementById('modalStep2').style.display  = 'block';
             document.getElementById('widgetError').textContent   = data.message || 'Payment failed. Please try again.';
@@ -1438,112 +1408,6 @@ document.getElementById('modalSubmitBtn').addEventListener('click', async functi
         document.getElementById('widgetError').style.display   = 'block';
         document.getElementById('modalSubmitBtn').disabled = false;
     }
-});
-
-// ── Success countdown + refresh givers ───────────────────────
-function startSuccessCountdown(donationId) {
-    var bar       = document.getElementById('successBar');
-    var countdown = document.getElementById('successCountdown');
-    var secs      = 5;
-    var pollTimer = null;
-
-    // Shrink bar over 5s
-    if (bar) {
-        bar.style.transition = 'none';
-        bar.style.width      = '100%';
-        setTimeout(function() {
-            bar.style.transition = 'width 5s linear';
-            bar.style.width      = '0%';
-        }, 30);
-    }
-
-    // Poll every 3s to check if payment confirmed, refresh givers when it is
-    function poll() {
-        fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id=' + donationId)
-            .then(function(r){ return r.text(); })
-            .then(function(txt){
-                var d;
-                try { d = JSON.parse(txt); } catch(e){ return; }
-                if (d.status === 'completed') {
-                    clearInterval(pollTimer);
-                    refreshGivers();
-                }
-            }).catch(function(){});
-    }
-    pollTimer = setInterval(poll, 3000);
-
-    // Countdown text (just informational, won't redirect)
-    if (countdown) countdown.textContent = 'Payment prompt sent to your phone. Enter your PIN.';
-
-    // Auto-close modal after 5s and reload page to refresh givers list
-    setTimeout(function() {
-        clearInterval(pollTimer);
-        closeDonationModal();
-        refreshGivers();
-    }, 5000);
-}
-
-// ── Refresh givers list without full page reload ──────────────
-function refreshGivers() {
-    fetch('<?= BASE ?>/api/donations.php?action=list&campaign_id=<?= $cid ?>&page=1')
-        .then(function(r){ return r.text(); })
-        .then(function(txt){
-            var d;
-            try { d = JSON.parse(txt); } catch(e){ return; }
-            if (!d.success || !d.donations) return;
-            var container = document.querySelector('.recent-donations');
-            if (!container) return;
-
-            var title = container.querySelector('.section-title');
-            var currency = '<?= $c['currency'] ?>';
-
-            // Rebuild the list
-            var html = '';
-            var colours = ['#1a7a3c','#145f2e','#d97706','#2563eb','#7c3aed','#dc2626'];
-            d.donations.forEach(function(rd) {
-                var name = rd.is_anonymous ? 'Anonymous' : (rd.donor_name || 'Anonymous');
-                var initial = name.charAt(0).toUpperCase();
-                var col = colours[initial.charCodeAt(0) % colours.length];
-                var diff = Math.floor((Date.now()/1000) - (new Date(rd.payment_date).getTime()/1000));
-                var timeStr = diff < 60 ? 'Just now' : diff < 3600 ? Math.floor(diff/60)+'m ago' : diff < 86400 ? Math.floor(diff/3600)+'h ago' : Math.floor(diff/86400)+'d ago';
-                var topBadge = rd.amount >= 500000 ? '<span style="background:#fef3c7;padding:1px 6px;border-radius:99px;font-size:.6rem;font-weight:700;color:#92400e;margin-left:3px;">🏆 Top</span>' : '';
-                html += '<div class="donation-item">' +
-                    '<div style="display:flex;align-items:center;gap:9px;">' +
-                        '<div style="width:34px;height:34px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.78rem;flex-shrink:0;">'+initial+'</div>' +
-                        '<div>' +
-                            '<div class="donor-name">'+name+topBadge+'</div>' +
-                            '<div class="donor-time">'+timeStr+'</div>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="donor-amount">+'+currency+' '+parseInt(rd.amount).toLocaleString()+'</div>' +
-                '</div>';
-            });
-
-            // Update count in title
-            if (title) {
-                var newCount = d.donations.length;
-                title.innerHTML = '<i class="fas fa-users" style="color:var(--green);margin-right:6px;"></i>' + newCount + ' ' + (newCount === 1 ? 'giver' : 'givers');
-            }
-
-            // Replace items (keep title, replace rest)
-            var existing = container.querySelectorAll('.donation-item');
-            existing.forEach(function(el){ el.remove(); });
-            var emptyMsg = container.querySelector('p');
-            if (emptyMsg) emptyMsg.remove();
-
-            if (html) {
-                container.insertAdjacentHTML('beforeend', html);
-            } else {
-                container.insertAdjacentHTML('beforeend',
-                    '<p style="color:#94a3b8;font-size:.86rem;text-align:center;padding:20px 0;">Be the first to give!</p>');
-            }
-        }).catch(function(){});
-}
-
-// ── Done button — close modal and refresh givers ──────────────
-document.getElementById('modalDoneBtn').addEventListener('click', function() {
-    closeDonationModal();
-    refreshGivers();
 });
 
 // ── Close on overlay click ────────────────────────────────────

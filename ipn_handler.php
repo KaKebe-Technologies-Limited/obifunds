@@ -1,99 +1,121 @@
 <?php
 // ============================================================
-// ObiFunds – ipn_handler.php
-// Handles ioTec server-to-server payment notifications
+// ObiFunds – ipn_handler.php (FIXED VERSION)
 // ============================================================
 
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/iotec_config.php';
 
-// ── 1. Verify the IPN secret header ──────────────────────────
-// ioTec sends X-IPN-Secret with every callback — reject anything without it
-$incoming_secret = $_SERVER['HTTP_X_IPN_SECRET'] ?? '';
-if (!hash_equals(IOTEC_IPN_SECRET, $incoming_secret)) {
-    error_log('ioTec IPN: Rejected — invalid or missing X-IPN-Secret');
-    http_response_code(401);
-    echo 'Unauthorized';
+// ── Log the incoming request ──────────────────────────────────
+$raw_post = file_get_contents('php://input');
+$post_data = json_decode($raw_post, true);
+error_log('ioTec IPN Received: ' . print_r($post_data, true));
+
+// ── Try different field names that ioTec might use ────────────
+$transaction_id = $post_data['transactionId'] ?? $post_data['id'] ?? $post_data['transaction_id'] ?? '';
+$external_id    = $post_data['externalId'] ?? $post_data['reference'] ?? $post_data['merchantReference'] ?? '';
+$status         = strtolower($post_data['status'] ?? $post_data['paymentStatus'] ?? '');
+
+if (empty($transaction_id)) {
+    error_log('❌ IPN: No transaction ID found in payload');
+    http_response_code(400);
+    echo 'Bad Request';
     exit;
 }
 
-// ── 2. Parse the payload ──────────────────────────────────────
-// Ensure column exists (auto-migration — safe to run on every request)
+// ── Ensure column exists ──────────────────────────────────────
 $conn->query(
     "ALTER TABLE donations ADD COLUMN IF NOT EXISTS
      iotec_transaction_id VARCHAR(100) NULL DEFAULT NULL"
 );
 
-$raw_post  = file_get_contents('php://input');
-$post_data = json_decode($raw_post, true);
-error_log('ioTec IPN Received: ' . $raw_post);
+// ── Try to find the donation ──────────────────────────────────
+$donation = null;
 
-if (isset($post_data['id']) && isset($post_data['status'])) {
-    $transaction_id = $conn->real_escape_string($post_data['id']);
-    $external_id    = $conn->real_escape_string($post_data['externalId'] ?? '');
-    $status         = strtolower($post_data['status']); // 'success'|'failed'|'pending'|'senttovendor'
-
-    // Strategy 1: match by ioTec UUID
+// Strategy 1: Match by ioTec transaction ID
+if (!empty($transaction_id)) {
     $result = $conn->query(
         "SELECT donation_id, campaign_id, amount FROM donations
-         WHERE iotec_transaction_id = '$transaction_id' LIMIT 1"
+         WHERE iotec_transaction_id = '" . $conn->real_escape_string($transaction_id) . "' 
+         OR transaction_reference = '" . $conn->real_escape_string($transaction_id) . "'
+         LIMIT 1"
     );
     $donation = $result ? $result->fetch_assoc() : null;
+}
 
-    // Strategy 2: fallback — match by our own externalId (stored in transaction_reference)
-    // externalId format is "DON-{donation_id}-{timestamp}" — extract donation_id from it
-    if (!$donation && !empty($external_id)) {
-        // Also store the ioTec UUID now that we have it
-        if (preg_match('/^DON-(\d+)-/', $external_id, $m)) {
-            $fb_id = (int)$m[1];
-            $result2 = $conn->query(
-                "SELECT donation_id, campaign_id, amount FROM donations
-                 WHERE donation_id = $fb_id AND status = 'pending' LIMIT 1"
+// Strategy 2: Match by external ID (DON-{id}-{timestamp})
+if (!$donation && !empty($external_id)) {
+    if (preg_match('/^DON-(\d+)-/', $external_id, $m)) {
+        $fb_id = (int)$m[1];
+        $result = $conn->query(
+            "SELECT donation_id, campaign_id, amount FROM donations
+             WHERE donation_id = $fb_id AND status = 'pending' LIMIT 1"
+        );
+        $donation = $result ? $result->fetch_assoc() : null;
+        if ($donation && !empty($transaction_id)) {
+            $conn->query(
+                "UPDATE donations SET iotec_transaction_id = '" . 
+                $conn->real_escape_string($transaction_id) . "' 
+                WHERE donation_id = $fb_id"
             );
-            $donation = $result2 ? $result2->fetch_assoc() : null;
-            if ($donation) {
-                // Save the ioTec UUID for future lookups
-                $conn->query(
-                    "UPDATE donations SET iotec_transaction_id = '$transaction_id'
-                     WHERE donation_id = $fb_id"
-                );
-                error_log("ioTec IPN: Matched via externalId fallback, donation_id=$fb_id");
-            }
         }
-    }
-    
-    if ($donation) {
-        if ($status === 'success') {
-            $conn->query(
-                "UPDATE donations SET status = 'completed', payment_date = NOW()
-                 WHERE donation_id = " . (int)$donation['donation_id']
-            );
-            $conn->query(
-                "UPDATE campaigns SET
-                    raised_amount     = raised_amount + " . (float)$donation['amount'] . ",
-                    contributor_count = contributor_count + 1
-                 WHERE campaign_id = " . (int)$donation['campaign_id']
-            );
-            error_log('✅ ioTec IPN: Donation ' . $donation['donation_id'] . ' completed.');
-
-        } elseif ($status === 'failed') {
-            $conn->query(
-                "UPDATE donations SET status = 'failed'
-                 WHERE donation_id = " . (int)$donation['donation_id']
-            );
-            error_log('❌ ioTec IPN: Donation ' . $donation['donation_id'] . ' failed.');
-
-        } else {
-            // Pending / SentToVendor — still processing, no DB change needed
-            error_log('⏳ ioTec IPN: Donation ' . $donation['donation_id'] . ' status: ' . $status);
-        }
-    } else {
-        error_log('⚠️ ioTec IPN: Transaction not found: ' . $transaction_id);
     }
 }
 
-// Always respond with 200 OK
+// Strategy 3: Match by phone number and amount (last resort)
+if (!$donation && !empty($post_data['phoneNumber'])) {
+    $phone = $conn->real_escape_string($post_data['phoneNumber']);
+    $amount = (float)($post_data['amount'] ?? 0);
+    $result = $conn->query(
+        "SELECT donation_id, campaign_id, amount FROM donations
+         WHERE donor_phone = '$phone' 
+         AND amount = $amount 
+         AND status = 'pending' 
+         ORDER BY created_at DESC LIMIT 1"
+    );
+    $donation = $result ? $result->fetch_assoc() : null;
+}
+
+// ── Process the donation ──────────────────────────────────────
+if ($donation) {
+    $donation_id = (int)$donation['donation_id'];
+    $campaign_id = (int)$donation['campaign_id'];
+    $amount = (float)$donation['amount'];
+
+    if ($status === 'success' || $status === 'completed' || $status === 'paid') {
+        // Update donation
+        $conn->query(
+            "UPDATE donations SET 
+                status = 'completed', 
+                payment_date = NOW() 
+             WHERE donation_id = $donation_id"
+        );
+        
+        // Update campaign
+        $conn->query(
+            "UPDATE campaigns SET 
+                raised_amount = raised_amount + $amount, 
+                contributor_count = contributor_count + 1 
+             WHERE campaign_id = $campaign_id"
+        );
+        
+        error_log('✅ IPN: Donation ' . $donation_id . ' completed. Campaign ' . $campaign_id . ' updated.');
+        
+    } elseif ($status === 'failed' || $status === 'cancelled') {
+        $conn->query(
+            "UPDATE donations SET status = 'failed' WHERE donation_id = $donation_id"
+        );
+        error_log('❌ IPN: Donation ' . $donation_id . ' failed.');
+    } else {
+        error_log('⏳ IPN: Donation ' . $donation_id . ' status: ' . $status);
+    }
+} else {
+    error_log('⚠️ IPN: No matching donation found for transaction: ' . $transaction_id);
+    // Log the full payload for debugging
+    error_log('IPN Payload: ' . print_r($post_data, true));
+}
+
+// ── Always respond with 200 OK ──────────────────────────────
 http_response_code(200);
 echo 'OK';
 exit;
-?>

@@ -107,15 +107,32 @@ var countEl    = document.getElementById('pollCount');
 function animBar(){ bar.style.transition='none'; bar.style.width='0%'; setTimeout(function(){ bar.style.transition='width 4.8s linear'; bar.style.width='100%'; },50); }
 
 function showSuccess(){
-  document.getElementById('pendingIcon').textContent='🎉';
-  document.getElementById('pendingTitle').textContent='Payment Confirmed!';
-  document.getElementById('pendingMsg').innerHTML='Your contribution was received. Thank you! 🌱';
-  document.getElementById('pendingMsg').style.color='var(--green)';
-  document.querySelector('[id="pollBar"]').parentElement.style.display='none';
-  document.querySelector('[style*="fde68a"]') && (document.querySelector('[style*="fde68a"]').style.display='none');
-  document.getElementById('checkNowBtn').outerHTML =
-    '<a href="<?= BASE ?>/campaign-detail.php?id='+campaignId+'" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--green);color:#fff;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.92rem;">'+
-    '<i class="fas fa-arrow-left"></i> Back to Drive</a>';
+  // Replace the entire card with a clean success view
+  var card = document.querySelector('[style*="border-radius:24px"]');
+  card.innerHTML =
+    '<div style="text-align:center;padding:16px 0;">' +
+      '<div style="width:80px;height:80px;background:linear-gradient(135deg,#1a7a3c,#145f2e);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(26,122,60,.3);">' +
+        '<span style="font-size:2.2rem;">✓</span>' +
+      '</div>' +
+      '<h1 style="font-weight:900;color:#145f2e;font-size:1.5rem;margin-bottom:8px;">Payment Confirmed! 🎉</h1>' +
+      '<p style="color:#607068;font-size:.92rem;margin-bottom:24px;line-height:1.6;">Your contribution has been received. Thank you for making a difference!</p>' +
+      '<div style="background:#e8f5ee;border-radius:10px;padding:10px 14px;font-size:.82rem;color:#145f2e;margin-bottom:24px;">Returning to the drive in <strong id="countdownSecs">3</strong>s…</div>' +
+      '<a href="<?= BASE ?>/campaign-detail.php?id='+campaignId+'" id="backBtn" ' +
+        'style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1a7a3c;color:#fff;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.92rem;">' +
+        '← Back to Drive</a>' +
+    '</div>';
+
+  // Auto-redirect after 3s
+  var secs = 3;
+  var cd = document.getElementById('countdownSecs');
+  var t = setInterval(function(){
+    secs--;
+    if(cd) cd.textContent = secs;
+    if(secs <= 0){
+      clearInterval(t);
+      window.location.href = '<?= BASE ?>/campaign-detail.php?id='+campaignId;
+    }
+  }, 1000);
 }
 
 async function checkNow(){

@@ -18,7 +18,7 @@ define('IOTEC_LIVE_WALLET_ID', '019f37d2-82a0-721e-8d72-7fd11d81368a');  // ← 
 
 // ── Environment ───────────────────────────────────────────────
 // true = sandbox/testing   false = live/production
-define('IOTEC_SANDBOX', false);   // ✅ LIVE — deployed at public_html root (obifunds.com)
+define('IOTEC_SANDBOX', false);   // ✅ LIVE — https://obifunds.com
 
 // ── API Base URLs (correct endpoints from official docs) ──────
 define('IOTEC_AUTH_URL', 'https://id.iotec.io/connect/token');   // OAuth token endpoint
@@ -30,13 +30,24 @@ define('IOTEC_IPN_SECRET', '2ta6cfziH7W54kgDFGhUmZRq8esTXMw9SEBvLQyb');
 define('IOTEC_CURRENCY', IOTEC_SANDBOX ? 'ITX' : 'UGX');
 
 // ── Callback URLs ─────────────────────────────────────────────
-// NOTE: Callbacks are configured in the pay.iotec.io portal per wallet,
-// not passed in the API request. Register these URLs there:
+// These are registered in the pay.iotec.io portal:
 //   pay.iotec.io → Wallets → [your wallet] → Settings → Callback URLs
-// Collections callback: BASE . '/payment_callback.php'
-// IPN / notify URL:     BASE . '/ipn_handler.php'
+//
+//   Collections callback : https://obifunds.com/payment_callback.php
+//   IPN / notify URL     : https://obifunds.com/ipn_handler.php
+//
+// The constants below are used anywhere in code that needs the full URL.
 if (!defined('IOTEC_CALLBACK_URL')) {
-    define('IOTEC_CALLBACK_URL', BASE . '/payment_callback.php');
-    define('IOTEC_IPN_URL',      BASE . '/ipn_handler.php');
+    $isLocal = strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false ||
+               strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false;
+
+    define('IOTEC_CALLBACK_URL', $isLocal
+        ? BASE . '/payment_callback.php'
+        : 'https://obifunds.com/payment_callback.php'
+    );
+    define('IOTEC_IPN_URL', $isLocal
+        ? BASE . '/ipn_handler.php'
+        : 'https://obifunds.com/ipn_handler.php'
+    );
 }
 ?>
