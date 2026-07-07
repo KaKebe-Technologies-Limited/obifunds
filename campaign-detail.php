@@ -371,6 +371,8 @@ include __DIR__ . '/includes/header.php';
     padding: 18px 16px;
     box-shadow: 0 1px 10px rgba(0,0,0,.06);
     min-width: 0;
+    position: relative;
+    z-index: 5;
 }
 .donation-body .recent-donations .section-title {
     font-size: .86rem;
@@ -425,6 +427,9 @@ include __DIR__ . '/includes/header.php';
 .donation-body .right-col {
     min-width: 0;
     align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 .donation-widget {
     background: #fff;
@@ -435,6 +440,7 @@ include __DIR__ . '/includes/header.php';
     top: 90px;
     min-width: 0;
     overflow: visible;
+    z-index: 10;
 }
 .donation-widget .widget-title {
     font-size: 1.1rem;
@@ -1391,8 +1397,8 @@ document.getElementById('modalSubmitBtn').addEventListener('click', async functi
         document.getElementById('modalLoading').style.display = 'none';
 
         if (data.success && data.pending) {
-            // Redirect to donation_success.php which has proper polling
-            window.location.href = '<?= BASE ?>/donation_success.php?donation_id=' + data.donation_id + '&status=pending';
+            // Use replace() so browser back button skips this and goes to campaign page
+            window.location.replace('<?= BASE ?>/donation_success.php?donation_id=' + data.donation_id + '&status=pending');
         } else {
             document.getElementById('modalStep2').style.display  = 'block';
             document.getElementById('widgetError').textContent   = data.message || 'Payment failed. Please try again.';

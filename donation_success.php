@@ -104,6 +104,9 @@ var pollCount  = 0, maxPolls = 24, pollTimer = null;
 var bar        = document.getElementById('pollBar');
 var countEl    = document.getElementById('pollCount');
 
+// Replace this page in browser history so "back" goes to the campaign, not here
+history.replaceState(null, '', '<?= BASE ?>/campaign-detail.php?id=<?= (int)$donation['campaign_id'] ?>');
+
 function animBar(){ bar.style.transition='none'; bar.style.width='0%'; setTimeout(function(){ bar.style.transition='width 4.8s linear'; bar.style.width='100%'; },50); }
 
 function showSuccess(){
@@ -112,25 +115,27 @@ function showSuccess(){
   card.innerHTML =
     '<div style="text-align:center;padding:16px 0;">' +
       '<div style="width:80px;height:80px;background:linear-gradient(135deg,#1a7a3c,#145f2e);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(26,122,60,.3);">' +
-        '<span style="font-size:2.2rem;">✓</span>' +
+        '<i class="fas fa-check" style="font-size:2rem;color:#fff;"></i>' +
       '</div>' +
       '<h1 style="font-weight:900;color:#145f2e;font-size:1.5rem;margin-bottom:8px;">Payment Confirmed! 🎉</h1>' +
-      '<p style="color:#607068;font-size:.92rem;margin-bottom:24px;line-height:1.6;">Your contribution has been received. Thank you for making a difference!</p>' +
-      '<div style="background:#e8f5ee;border-radius:10px;padding:10px 14px;font-size:.82rem;color:#145f2e;margin-bottom:24px;">Returning to the drive in <strong id="countdownSecs">3</strong>s…</div>' +
+      '<p style="color:#607068;font-size:.92rem;margin-bottom:24px;line-height:1.6;">Your contribution has been received.<br>Thank you for making a difference!</p>' +
+      '<div style="background:#e8f5ee;border:1px solid #b6e3c8;border-radius:10px;padding:10px 14px;font-size:.82rem;color:#145f2e;margin-bottom:24px;">' +
+        '⏱ Returning to the drive in <strong id="countdownSecs">4</strong>s…' +
+      '</div>' +
       '<a href="<?= BASE ?>/campaign-detail.php?id='+campaignId+'" id="backBtn" ' +
         'style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1a7a3c;color:#fff;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.92rem;">' +
-        '← Back to Drive</a>' +
+        '<i class="fas fa-arrow-left"></i> Back to Drive</a>' +
     '</div>';
 
-  // Auto-redirect after 3s
-  var secs = 3;
+  // Auto-redirect using replace() so back button skips this page
+  var secs = 4;
   var cd = document.getElementById('countdownSecs');
   var t = setInterval(function(){
     secs--;
-    if(cd) cd.textContent = secs;
-    if(secs <= 0){
+    if (cd) cd.textContent = secs;
+    if (secs <= 0) {
       clearInterval(t);
-      window.location.href = '<?= BASE ?>/campaign-detail.php?id='+campaignId;
+      window.location.replace('<?= BASE ?>/campaign-detail.php?id=' + campaignId);
     }
   }, 1000);
 }
