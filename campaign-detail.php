@@ -1243,12 +1243,11 @@ function closeDonationModal() {
 }
 
 function resetModal() {
-    document.getElementById('modalStep1').style.display  = 'block';
-    document.getElementById('modalStep2').style.display  = 'none';
+    document.getElementById('modalStep1').style.display   = 'block';
+    document.getElementById('modalStep2').style.display   = 'none';
     document.getElementById('modalLoading').style.display = 'none';
-    document.getElementById('modalSuccess').style.display = 'none';
     document.getElementById('modalAmountError').style.display = 'none';
-    document.getElementById('widgetError').style.display = 'none';
+    document.getElementById('widgetError').style.display  = 'none';
     document.querySelectorAll('.mq-btn').forEach(b => b.classList.remove('selected'));
     document.getElementById('modalCustomAmount').style.display = 'none';
     document.getElementById('modalCustomAmount').value = '';
@@ -1264,11 +1263,10 @@ function resetModal() {
 // ── Helper: update summary panel ─────────────────────────────
 function updateSummary(amount) {
     var fmt = 'UGX ' + parseInt(amount).toLocaleString();
-    document.getElementById('summaryAmount').textContent     = fmt;
-    document.getElementById('summaryTotal').textContent      = fmt;
-    document.getElementById('submitAmountText').textContent  = fmt;
-    document.getElementById('chipAmountText').textContent    = fmt;
-    document.getElementById('successAmount').textContent     = fmt;
+    document.getElementById('summaryAmount').textContent    = fmt;
+    document.getElementById('summaryTotal').textContent     = fmt;
+    document.getElementById('submitAmountText').textContent = fmt;
+    document.getElementById('chipAmountText').textContent   = fmt;
 }
 
 // ── Go back to Step 1 ─────────────────────────────────────────
