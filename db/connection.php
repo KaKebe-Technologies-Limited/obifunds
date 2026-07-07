@@ -20,9 +20,9 @@ if ($isLocal) {
     $database = 'obifunds';
 } else {
     $host     = 'localhost';
-    $username = 'u850523537_VPS_KFundsUser';
+    $username = 'u850523537_VPS_ObiFundsU';
     $password = '@Kt2026#Kakebe';
-    $database = 'u850523537_VPS_ObiFundsU';
+    $database = 'u850523537_ObiFunds';
 }
 
 $conn = new mysqli($host, $username, $password, $database);
