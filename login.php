@@ -126,13 +126,33 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Signing in…';
   var fd = new FormData(this);
-  fd.append('action','login');
+  fd.append('action', 'login');
   try {
-    var res  = await fetch('<?= BASE ?>/api/auth.php?action=login', {method:'POST',body:fd});
-    var data = await res.json();
-    if (data.success) { window.location.href = data.redirect; }
-    else { err.textContent = data.message||'Sign in failed.'; err.style.display='block'; btn.disabled=false; btn.textContent='Sign In'; }
-  } catch(ex) { err.textContent='Network error.'; err.style.display='block'; btn.disabled=false; btn.textContent='Sign In'; }
+    var res  = await fetch('<?= BASE ?>/api/auth.php?action=login', {method:'POST', body:fd});
+    var text = await res.text();
+    var data;
+    try { data = JSON.parse(text); }
+    catch(pe) {
+      // Server returned non-JSON (PHP notice/warning) — show raw for debugging
+      err.textContent = 'Server error. Please try again.';
+      err.style.display = 'block';
+      console.error('Non-JSON response:', text);
+      btn.disabled = false; btn.textContent = 'Sign In';
+      return;
+    }
+    if (data.success) {
+      btn.textContent = 'Redirecting…';
+      window.location.href = data.redirect;
+    } else {
+      err.textContent = data.message || 'Sign in failed.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  } catch(ex) {
+    err.textContent = 'Could not reach the server. Check your connection and try again.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
 });
 </script>
 </body>

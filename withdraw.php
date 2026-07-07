@@ -91,7 +91,7 @@ $totalAvailable = $conn->query(
       <a href="<?= BASE ?>/withdraw.php" class="sidebar-link active"><i class="fas fa-credit-card"></i>Withdrawals</a>
       <a href="<?= BASE ?>/profile.php" class="sidebar-link"><i class="fas fa-cog"></i>Settings</a>
     </nav>
-    <div class="sidebar-footer"><a href="<?= BASE ?>/api/auth.php?action=logout" class="sidebar-link logout-link"><i class="fas fa-sign-out-alt"></i>Logout</a></div>
+    <div class="sidebar-footer"><a href="<?= BASE ?>/logout.php" class="sidebar-link logout-link"><i class="fas fa-sign-out-alt"></i>Logout</a></div>
   </aside>
 
   <main class="main-content">

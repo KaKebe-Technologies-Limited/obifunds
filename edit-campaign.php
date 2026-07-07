@@ -158,7 +158,7 @@ if (!isset($permError) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
     </nav>
     <div class="sidebar-footer">
-      <a href="<?= BASE ?>/api/auth.php?action=logout" class="sidebar-link logout-link"><i class="fas fa-sign-out-alt"></i>Logout</a>
+      <a href="<?= BASE ?>/logout.php" class="sidebar-link logout-link"><i class="fas fa-sign-out-alt"></i>Logout</a>
     </div>
   </aside>
 
