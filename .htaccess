@@ -1,0 +1,10 @@
+# ObiFunds – .htaccess
+# Increase upload limits for campaign photo uploads (up to 6 × 5MB)
+php_value upload_max_filesize 32M
+php_value post_max_size 35M
+php_value max_file_uploads 20
+php_value max_execution_time 120
+php_value memory_limit 128M
+
+# Pretty URLs (optional)
+Options -Indexes
