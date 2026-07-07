@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// KakebeFunds – payment_callback.php
+// ObiFunds – payment_callback.php
 // ioTec redirects the user here after payment attempt.
 // We check the actual DB status (set by IPN) rather than
 // trusting URL parameters alone.

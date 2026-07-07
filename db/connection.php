@@ -17,7 +17,7 @@ if ($isLocal) {
     $host     = 'localhost';
     $username = 'root';
     $password = '';
-    $database = 'kakebefunds';
+    $database = 'obifunds';
 } else {
     $host     = 'localhost';
     $username = 'u850523537_VPS_KFundsUser';

@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// KakebeFunds – includes/iotec_functions.php
+// ObiFunds – includes/iotec_functions.php
 // ioTec Pay helper functions
 // Docs: https://iotec.io/api-docs/pay
 // ============================================================
@@ -89,7 +89,7 @@ function initiateIotecPayment(
         'payer'                      => normalisePhone($phone),
         'payerName'                  => $donor_name ?: 'Donor',
         'payerNote'                  => $description,
-        'payeeNote'                  => 'KakebeFunds donation #' . $donation_id,
+        'payeeNote'                  => 'ObiFunds donation #' . $donation_id,
         'amount'                     => (float)$amount,
         'transactionChargesCategory' => 'ChargeWallet',  // platform absorbs charges
     ];

@@ -1,6 +1,6 @@
 ﻿<?php
 // ============================================================
-// KakebeFunds – includes/iotec_config.php
+// ObiFunds – includes/iotec_config.php
 // ioTec Pay Configuration
 // Docs: https://iotec.io/api-docs/pay
 // ============================================================
@@ -18,7 +18,7 @@ define('IOTEC_LIVE_WALLET_ID', '019f37d2-82a0-721e-8d72-7fd11d81368a');  // ← 
 
 // ── Environment ───────────────────────────────────────────────
 // true = sandbox/testing   false = live/production
-define('IOTEC_SANDBOX', false);   // ✅ LIVE — callback registered on kakebefunds.obifunds.com
+define('IOTEC_SANDBOX', false);   // ✅ LIVE — deployed at public_html root (obifunds.com)
 
 // ── API Base URLs (correct endpoints from official docs) ──────
 define('IOTEC_AUTH_URL', 'https://id.iotec.io/connect/token');   // OAuth token endpoint

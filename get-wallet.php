@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// KakebeFunds – get-wallet.php
+// ObiFunds – get-wallet.php
 // Lists your ioTec wallets so you can find the correct UUID
 // ⚠️ Delete after use
 // ============================================================

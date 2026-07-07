@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// KakebeFunds – ipn_handler.php
+// ObiFunds – ipn_handler.php
 // Handles ioTec server-to-server payment notifications
 // ============================================================
 

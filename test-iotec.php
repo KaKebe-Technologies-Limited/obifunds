@@ -1,6 +1,6 @@
 ﻿<?php
 // ============================================================
-// KakebeFunds – test-iotec.php
+// ObiFunds – test-iotec.php
 // Sandbox test page for ioTec Pay integration
 // ⚠️  DELETE or RESTRICT THIS FILE before going live
 // ============================================================
@@ -165,7 +165,7 @@ function renderCard(array $r): void {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ioTec Sandbox Test – KakebeFunds</title>
+    <title>ioTec Sandbox Test – ObiFunds</title>
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:'Segoe UI',sans-serif;background:#f3f4f6;color:#1f2937}
@@ -311,7 +311,7 @@ function renderCard(array $r): void {
     <?php endif; ?>
 
     <p style="font-size:.75rem;color:#9ca3af;text-align:center;margin-top:32px;">
-        KakebeFunds · ioTec Sandbox Tester · <?= date('Y-m-d H:i:s') ?>
+        ObiFunds · ioTec Sandbox Tester · <?= date('Y-m-d H:i:s') ?>
     </p>
 </div>
 </body>

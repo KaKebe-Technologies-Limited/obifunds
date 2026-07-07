@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// KakebeFunds – api/donations.php
+// ObiFunds – api/donations.php
 // Handles donation submission via ioTec Pay + donation listing
 // ============================================================
 

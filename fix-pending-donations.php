@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// KakebeFunds – fix-pending-donations.php
+// ObiFunds – fix-pending-donations.php
 // One-time script: recover donations that were paid but stuck
 // as 'pending' because iotec_transaction_id wasn't saved yet.
 // DELETE THIS FILE after running it.

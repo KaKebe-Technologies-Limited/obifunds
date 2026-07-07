@@ -41,7 +41,7 @@ if (!isset($GLOBALS['conn']) || !($GLOBALS['conn'] instanceof mysqli)) {
         $isLocal = strpos($_SERVER['HTTP_HOST'], 'localhost') !== false ||
                    strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false;
         if ($isLocal) {
-            $h = 'localhost'; $u = 'root'; $p = ''; $db = 'kakebefunds';
+            $h = 'localhost'; $u = 'root'; $p = ''; $db = 'obifunds';
         } else {
             $h = 'localhost'; $u = 'u850523537_VPS_ChamaUser'; $p = '@Kt2026#Kakebe'; $db = 'u850523537_ObiFunds';
         }
