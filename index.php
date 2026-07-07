@@ -107,7 +107,7 @@ include __DIR__ . '/includes/header.php';
           </div>
           <div class="obi-slide-btns">
             <a href="<?= BASE ?>/campaign-detail.php?id=<?= $s['campaign_id'] ?>" class="btn btn-yellow btn-lg">
-              <i class="fas fa-hand-holding-heart"></i> Support This Drive
+              Support This Drive
             </a>
             <a href="<?= BASE ?>/create-campaign.php" class="btn btn-outline-white btn-lg">
               Start Your Own
@@ -131,7 +131,7 @@ include __DIR__ . '/includes/header.php';
           </div>
           <div class="obi-slide-btns">
             <a href="<?= BASE ?>/campaign-drives.php" class="btn btn-yellow btn-lg">
-              <i class="fas fa-hand-holding-heart"></i> Support This Drive
+              Support This Drive
             </a>
             <a href="<?= BASE ?>/create-campaign.php" class="btn btn-outline-white btn-lg">Start Your Own</a>
           </div>
@@ -187,17 +187,26 @@ include __DIR__ . '/includes/header.php';
       <p class="section-sub">Every contribution counts. Pick a cause and make your mark today.</p>
     </div>
 
-    <div class="home-campaigns-grid">
-      <?php if ($featured && $featured->num_rows > 0): ?>
-        <?php while ($c = $featured->fetch_assoc()): ?>
+    <div class="home-campaigns-grid" id="homeCampaignsGrid">
+      <?php
+        $featuredArr = [];
+        if ($featured && $featured->num_rows > 0) {
+            while ($c = $featured->fetch_assoc()) $featuredArr[] = $c;
+        }
+        $showList = count($featuredArr) > 4;
+      ?>
+      <?php if (!empty($featuredArr)): ?>
+        <?php foreach ($featuredArr as $ci => $c): ?>
           <?php
             $pct      = min(100, (float)$c['pct']);
             $daysLeft = (int)$c['days_left'];
             $daysStr  = $daysLeft > 0 ? "$daysLeft days left" : ($daysLeft === 0 ? 'Ends today' : 'Ended');
-            $catClass = 'badge-' . strtolower($c['category'] ?? 'other');
             $image    = $c['image_url'] ?: 'https://picsum.photos/seed/' . ($c['slug'] ?? $c['campaign_id']) . '/600/400';
+            $isHidden = $showList && $ci >= 4;
           ?>
-          <a href="<?= BASE ?>/campaign-detail.php?id=<?= $c['campaign_id'] ?>" class="card campaign-card obi-campaign-card" style="text-decoration:none;color:inherit;">
+          <a href="<?= BASE ?>/campaign-detail.php?id=<?= $c['campaign_id'] ?>"
+             class="card campaign-card obi-campaign-card<?= $isHidden ? ' obi-card-hidden' : '' ?>"
+             style="text-decoration:none;color:inherit;">
             <div style="position:relative;">
               <img class="card-img" src="<?= htmlspecialchars($image) ?>" alt="<?= htmlspecialchars($c['title']) ?>" loading="lazy" />
               <span class="obi-card-cat"><?= htmlspecialchars($c['category'] ?? 'General') ?></span>
@@ -215,7 +224,42 @@ include __DIR__ . '/includes/header.php';
               </div>
             </div>
           </a>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
+
+        <?php if ($showList): ?>
+        <!-- Remaining drives as a compact list -->
+        <div class="obi-more-list" id="obiMoreList" style="display:none;grid-column:1/-1;">
+          <h3 style="font-size:.88rem;font-weight:800;color:var(--green-dark);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">
+            More Drives (<?= count($featuredArr) - 4 ?> more)
+          </h3>
+          <?php foreach ($featuredArr as $ci => $c): ?>
+            <?php if ($ci < 4) continue; ?>
+            <?php
+              $pct      = min(100, (float)$c['pct']);
+              $daysLeft = (int)$c['days_left'];
+              $daysStr  = $daysLeft > 0 ? "$daysLeft days left" : ($daysLeft === 0 ? 'Ends today' : 'Ended');
+            ?>
+            <a href="<?= BASE ?>/campaign-detail.php?id=<?= $c['campaign_id'] ?>"
+               class="obi-list-item" style="text-decoration:none;">
+              <div class="obi-list-left">
+                <span class="obi-list-cat"><?= htmlspecialchars($c['category'] ?? 'General') ?></span>
+                <span class="obi-list-title"><?= htmlspecialchars($c['title']) ?></span>
+              </div>
+              <div class="obi-list-right">
+                <span class="obi-list-pct"><?= $pct ?>%</span>
+                <span class="obi-list-days"><?= $daysStr ?></span>
+              </div>
+            </a>
+          <?php endforeach; ?>
+        </div>
+        <div style="grid-column:1/-1;text-align:center;margin-top:4px;">
+          <button id="obiShowMoreBtn" onclick="toggleMoreDrives()"
+            style="background:none;border:1.5px solid var(--green);color:var(--green);padding:8px 22px;border-radius:99px;font-size:.82rem;font-weight:700;cursor:pointer;">
+            Show <?= count($featuredArr) - 4 ?> more drives <i class="fas fa-chevron-down" style="margin-left:4px;"></i>
+          </button>
+        </div>
+        <?php endif; ?>
+
       <?php else: ?>
         <div style="grid-column:1/-1;text-align:center;padding:64px 0;color:var(--gray-400);">
           <i class="fas fa-seedling" style="font-size:3rem;margin-bottom:16px;display:block;color:var(--green-light);"></i>
@@ -553,6 +597,90 @@ include __DIR__ . '/includes/header.php';
   .obi-cta-inner { flex-direction:column; text-align:center; }
   .obi-cta-btns { justify-content:center; }
 }
+
+/* ═══════════════ CATEGORY PILLS (fit-to-content) ═══════════════ */
+.obi-cat-row {
+  display:flex; flex-wrap:wrap; gap:8px;
+  justify-content:flex-start; padding:0;
+}
+.obi-cat-badge {
+  display:inline-block;
+  background:var(--yellow);
+  color:var(--gray-900);
+  font-size:.68rem; font-weight:800;
+  padding:4px 12px;
+  border-radius:99px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  white-space:nowrap;
+}
+
+/* ═══════════════ CAMPAIGNS — mobile single card ═══════════════ */
+.home-campaigns-grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:20px;
+}
+/* hidden extra cards when listing mode */
+.obi-card-hidden { display:none; }
+
+/* ── More drives list ── */
+.obi-more-list {
+  border-top:1px solid var(--gray-200);
+  padding-top:12px;
+  margin-top:8px;
+}
+.obi-list-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-radius:10px;
+  border:1px solid var(--gray-200); background:#fff;
+  margin-bottom:8px; gap:12px;
+  transition:background .15s;
+}
+.obi-list-item:hover { background:var(--gray-50); }
+.obi-list-left { display:flex; align-items:center; gap:10px; min-width:0; }
+.obi-list-cat {
+  flex-shrink:0;
+  background:var(--yellow); color:var(--gray-900);
+  font-size:.62rem; font-weight:800;
+  padding:3px 9px; border-radius:99px;
+  text-transform:uppercase; letter-spacing:.04em;
+}
+.obi-list-title {
+  font-size:.86rem; font-weight:700; color:var(--green-dark);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  min-width:0;
+}
+.obi-list-right { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:2px; }
+.obi-list-pct { font-size:.82rem; font-weight:800; color:var(--green); }
+.obi-list-days { font-size:.72rem; color:var(--gray-400); white-space:nowrap; }
+
+/* Responsive cards */
+@media (max-width:1280px) {
+  .home-campaigns-grid { grid-template-columns:repeat(3,1fr); }
+}
+@media (max-width:1023px) {
+  .home-campaigns-grid { grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width:600px) {
+  /* Mobile: show ONE card at a time */
+  .home-campaigns-grid {
+    display:flex; flex-direction:column; gap:16px;
+    padding:0 4px;
+  }
+  .home-campaigns-grid .obi-campaign-card { display:none; }
+  .home-campaigns-grid .obi-campaign-card:first-child { display:flex; flex-direction:column; }
+  /* After "show more" is clicked the cards reveal */
+  .home-campaigns-grid.obi-show-all .obi-campaign-card { display:flex; flex-direction:column; }
+
+  /* Section padding on mobile */
+  .section { padding-left:16px; padding-right:16px; }
+  .obi-cta-band { padding:48px 16px; }
+  .obi-stats-bar { padding:20px 16px; }
+  .obi-how-card { padding:24px 18px; }
+  .obi-why-card { padding:20px 18px; }
+  .container { padding-left:16px; padding-right:16px; }
+}
 </style>
 
 <script>
@@ -647,4 +775,36 @@ document.addEventListener('DOMContentLoaded',function(){
     setTimeout(function(){ el.style.width = el.dataset.width + '%'; },400);
   });
 });
+
+// ── Show/hide extra drives list ───────────────────────────────
+function toggleMoreDrives() {
+  var list = document.getElementById('obiMoreList');
+  var btn  = document.getElementById('obiShowMoreBtn');
+  if (!list) return;
+  var open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  btn.innerHTML = open
+    ? btn.innerHTML.replace('fa-chevron-up','fa-chevron-down').replace('Hide','Show')
+    : btn.innerHTML.replace('fa-chevron-down','fa-chevron-up').replace('Show','Hide');
+}
+
+// ── Mobile: show all cards when "See All" is clicked ─────────
+(function(){
+  if (window.innerWidth > 600) return;
+  var grid = document.getElementById('homeCampaignsGrid');
+  if (!grid) return;
+  var seeAllBtn = grid.parentElement && grid.parentElement.nextElementSibling &&
+                  grid.parentElement.nextElementSibling.querySelector('a');
+  // Add a small "Show all drives" link below the first card
+  var cards = grid.querySelectorAll('.obi-campaign-card');
+  if (cards.length <= 1) return;
+  var showBtn = document.createElement('button');
+  showBtn.textContent = 'Show all ' + cards.length + ' drives';
+  showBtn.style.cssText = 'width:100%;padding:12px;border:1.5px solid var(--green);border-radius:10px;background:#fff;color:var(--green);font-weight:700;font-size:.9rem;cursor:pointer;margin-top:4px;';
+  showBtn.addEventListener('click', function(){
+    grid.classList.add('obi-show-all');
+    this.style.display = 'none';
+  });
+  grid.after(showBtn);
+})();
 </script>

@@ -161,6 +161,20 @@ input, select, textarea { font-family: inherit; }
 .campaigns-grid      { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
 .home-campaigns-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
 
+@media (max-width:1280px) {
+  .home-campaigns-grid { grid-template-columns: repeat(3,1fr); }
+}
+@media (max-width:1023px) {
+  .campaigns-grid { grid-template-columns: repeat(2,1fr); gap: 20px; }
+  .home-campaigns-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width:767px) {
+  .campaigns-grid { grid-template-columns: 1fr; }
+}
+@media (max-width:600px) {
+  .home-campaigns-grid { display: flex; flex-direction: column; }
+}
+
 /* ── Section header ─────────────────────────────────────────── */
 .section-header  { text-align: center; margin-bottom: 52px; }
 .section-eyebrow { font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--green); display: block; margin-bottom: 10px; }
@@ -346,14 +360,12 @@ input[type="range"] { accent-color: var(--green); width: 100%; cursor: pointer; 
 @media (max-width: 1023px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .steps-grid  { grid-template-columns: 1fr; gap: 16px; }
-  .home-campaigns-grid { grid-template-columns: repeat(2,1fr); }
   .campaigns-grid      { grid-template-columns: repeat(2,1fr); }
   .grid-4 { grid-template-columns: repeat(2,1fr); }
 }
 @media (max-width: 767px) {
   html, body { overflow-x: hidden; }
   .footer-grid { grid-template-columns: 1fr; gap: 28px; }
-  .home-campaigns-grid { grid-template-columns: 1fr; }
   .campaigns-grid      { grid-template-columns: 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: 1fr 1fr; }
