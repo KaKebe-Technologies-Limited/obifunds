@@ -43,7 +43,7 @@ if (!isset($GLOBALS['conn']) || !($GLOBALS['conn'] instanceof mysqli)) {
         if ($isLocal) {
             $h = 'localhost'; $u = 'root'; $p = ''; $db = 'obifunds';
         } else {
-            $h = 'localhost'; $u = 'u850523537_VPS_ChamaUser'; $p = '@Kt2026#Kakebe'; $db = 'u850523537_ObiFunds';
+            $h = 'localhost'; $u = 'u850523537_VPS_KFundsUser'; $p = '@Kt2026#Kakebe'; $db = 'u850523537_VPS_ObiFundsU';
         }
         $c = new mysqli($h, $u, $p, $db);
         if ($c->connect_error) die("DB connection failed: " . $c->connect_error);
