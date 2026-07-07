@@ -3,17 +3,77 @@
 // ObiFunds – api/auth.php
 // ============================================================
 
+// Session MUST be started before any output or headers
 if (session_status() === PHP_SESSION_NONE) session_start();
+
 require_once __DIR__ . '/../includes/config.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+// ── LOGIN ─────────────────────────────────────────────────────
 if ($action === 'login') {
-    // Always output JSON
-    header('Content-Type: application/json');
 
     $identifier = trim($_POST['identifier'] ?? '');
     $password   = $_POST['password'] ?? '';
+
+    // ── Traditional POST (non-AJAX) ───────────────────────────
+    // When the form POSTs directly here we redirect instead of
+    // returning JSON, so the browser sets the session cookie normally.
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) ||
+              (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
+
+    if (!$isAjax) {
+        // Handle as a traditional form POST
+        if (empty($identifier) || empty($password)) {
+            header('Location: ' . BASE . '/login.php?err=' . urlencode('Please enter both email/phone and password.'));
+            exit;
+        }
+
+        $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL);
+        if ($isEmail) {
+            $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1");
+            $stmt->bind_param('s', $identifier);
+        } else {
+            $phone = preg_replace('/[^0-9]/', '', $identifier);
+            $stmt  = $conn->prepare("SELECT * FROM users WHERE phone = ? AND is_active = 1 LIMIT 1");
+            $stmt->bind_param('s', $phone);
+        }
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+
+        if ($user && $password === $user['password_hash']) {
+            // Write session data first, THEN regenerate id
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['role']    = $user['role'];
+            $_SESSION['user']    = [
+                'user_id'    => $user['user_id'],
+                'full_name'  => $user['full_name'],
+                'email'      => $user['email'],
+                'phone'      => $user['phone'],
+                'role'       => $user['role'],
+                'avatar_url' => $user['avatar_url'] ?? ''
+            ];
+            session_write_close();   // flush session to disk
+            session_start();         // re-open so we can still read it
+            session_regenerate_id(true); // now safe to rotate the ID
+
+            $conn->query("UPDATE users SET last_login = NOW() WHERE user_id = " . (int)$user['user_id']);
+
+            $dest          = ($user['role'] === 'admin') ? '/admin/index.php' : '/dashboard.php';
+            $redirectAfter = $_SESSION['redirect_after_auth'] ?? '';
+            unset($_SESSION['redirect_after_auth']);
+
+            header('Location: ' . ($redirectAfter ?: BASE . $dest));
+            exit;
+        }
+
+        // Bad credentials — send back to login with error
+        header('Location: ' . BASE . '/login.php?err=' . urlencode('Incorrect email/phone or password.'));
+        exit;
+    }
+
+    // ── AJAX JSON path ────────────────────────────────────────
+    header('Content-Type: application/json');
 
     if (empty($identifier) || empty($password)) {
         echo json_encode(['success' => false, 'message' => 'Please enter both email/phone and password.']);
@@ -21,23 +81,19 @@ if ($action === 'login') {
     }
 
     $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL);
-
     if ($isEmail) {
         $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1");
         $stmt->bind_param('s', $identifier);
     } else {
         $phone = preg_replace('/[^0-9]/', '', $identifier);
-        $stmt = $conn->prepare("SELECT * FROM users WHERE phone = ? AND is_active = 1 LIMIT 1");
+        $stmt  = $conn->prepare("SELECT * FROM users WHERE phone = ? AND is_active = 1 LIMIT 1");
         $stmt->bind_param('s', $phone);
     }
-
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();
 
     if ($user && $password === $user['password_hash']) {
-        // Regenerate session BEFORE writing session data
-        session_regenerate_id(true);
-
+        // Write session BEFORE regenerating the ID
         $_SESSION['user_id'] = $user['user_id'];
         $_SESSION['role']    = $user['role'];
         $_SESSION['user']    = [
@@ -48,6 +104,9 @@ if ($action === 'login') {
             'role'       => $user['role'],
             'avatar_url' => $user['avatar_url'] ?? ''
         ];
+        session_write_close();
+        session_start();
+        session_regenerate_id(true);
 
         $conn->query("UPDATE users SET last_login = NOW() WHERE user_id = " . (int)$user['user_id']);
 
@@ -66,6 +125,7 @@ if ($action === 'login') {
     exit;
 }
 
+// ── LOGOUT ────────────────────────────────────────────────────
 if ($action === 'logout') {
     $_SESSION = [];
 
@@ -78,10 +138,8 @@ if ($action === 'logout') {
 
     session_destroy();
 
-    // If called via AJAX return JSON, otherwise redirect directly
     $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) ||
-              strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest' ||
-              (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+              (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
 
     if ($isAjax) {
         header('Content-Type: application/json');
@@ -92,6 +150,7 @@ if ($action === 'logout') {
     exit;
 }
 
+// ── REGISTER ──────────────────────────────────────────────────
 if ($action === 'register') {
     header('Content-Type: application/json');
 
@@ -137,7 +196,6 @@ if ($action === 'register') {
     if ($conn->insert_id) {
         $userId = $conn->insert_id;
 
-        session_regenerate_id(true);
         $_SESSION['user_id'] = $userId;
         $_SESSION['role']    = $role;
         $_SESSION['user']    = [
@@ -148,6 +206,9 @@ if ($action === 'register') {
             'role'       => $role,
             'avatar_url' => ''
         ];
+        session_write_close();
+        session_start();
+        session_regenerate_id(true);
 
         $redirectAfter = $_SESSION['redirect_after_auth'] ?? '';
         unset($_SESSION['redirect_after_auth']);

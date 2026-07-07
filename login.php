@@ -7,8 +7,15 @@ if (!empty($_SESSION['user_id'])) {
     exit;
 }
 $msg     = $_GET['msg'] ?? '';
-$errMsg  = match($msg) { 'session_expired'=>'Your session expired. Please sign in again.', 'unauthorized'=>'Sign in to access that page.', default=>'' };
-$succMsg = ($msg==='logged_out') ? 'You\'ve been signed out successfully.' : '';
+$errMsg  = $_GET['err'] ?? '';
+if (!$errMsg) {
+    $errMsg = match($msg) {
+        'session_expired' => 'Your session expired. Please sign in again.',
+        'unauthorized'    => 'Sign in to access that page.',
+        default           => ''
+    };
+}
+$succMsg = ($msg === 'logged_out') ? 'You\'ve been signed out successfully.' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -88,7 +95,7 @@ $succMsg = ($msg==='logged_out') ? 'You\'ve been signed out successfully.' : '';
         <?php if ($errMsg): ?><div style="background:#fee2e2;color:#991b1b;padding:11px 14px;border-radius:10px;font-size:.85rem;margin-bottom:16px;"><?= htmlspecialchars($errMsg) ?></div><?php endif; ?>
         <?php if ($succMsg): ?><div style="background:var(--green-light);color:var(--green-dark);padding:11px 14px;border-radius:10px;font-size:.85rem;margin-bottom:16px;"><?= htmlspecialchars($succMsg) ?></div><?php endif; ?>
         <div id="loginError" style="display:none;background:#fee2e2;color:#991b1b;padding:11px 14px;border-radius:10px;font-size:.85rem;margin-bottom:16px;"></div>
-        <form id="loginForm" novalidate>
+        <form id="loginForm" action="<?= BASE ?>/api/auth.php?action=login" method="POST" novalidate>
           <div class="obi-input-group">
             <label>Email or Phone Number</label>
             <input type="text" id="identifier" name="identifier" placeholder="you@email.com" required autofocus />
@@ -119,40 +126,11 @@ function togglePw(btn, id) {
   inp.type = show ? 'text' : 'password';
   btn.innerHTML = show ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
 }
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
+// Show loading state on submit so the button doesn't look frozen
+document.getElementById('loginForm').addEventListener('submit', function() {
   var btn = document.getElementById('loginBtn');
-  var err = document.getElementById('loginError');
-  err.style.display = 'none';
-  btn.disabled = true; btn.textContent = 'Signing in…';
-  var fd = new FormData(this);
-  fd.append('action', 'login');
-  try {
-    var res  = await fetch('<?= BASE ?>/api/auth.php?action=login', {method:'POST', body:fd});
-    var text = await res.text();
-    var data;
-    try { data = JSON.parse(text); }
-    catch(pe) {
-      // Server returned non-JSON (PHP notice/warning) — show raw for debugging
-      err.textContent = 'Server error. Please try again.';
-      err.style.display = 'block';
-      console.error('Non-JSON response:', text);
-      btn.disabled = false; btn.textContent = 'Sign In';
-      return;
-    }
-    if (data.success) {
-      btn.textContent = 'Redirecting…';
-      window.location.href = data.redirect;
-    } else {
-      err.textContent = data.message || 'Sign in failed.';
-      err.style.display = 'block';
-      btn.disabled = false; btn.textContent = 'Sign In';
-    }
-  } catch(ex) {
-    err.textContent = 'Could not reach the server. Check your connection and try again.';
-    err.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Sign In';
-  }
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
 });
 </script>
 </body>
