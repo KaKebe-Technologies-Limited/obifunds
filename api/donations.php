@@ -101,27 +101,6 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-// ── Check Donation Status ──────────────────────────────────────
-if ($action === 'check_status' && $_SERVER['REQUEST_METHOD'] === 'GET') {
-    $donation_id = (int)($_GET['donation_id'] ?? 0);
-    
-    if ($donation_id <= 0) {
-        echo json_encode(['status' => 'error', 'message' => 'Invalid donation ID']);
-        exit;
-    }
-    
-    $sql = "SELECT status FROM donations WHERE donation_id = $donation_id";
-    $result = mysqli_query($conn, $sql);
-    $donation = mysqli_fetch_assoc($result);
-    
-    if ($donation) {
-        echo json_encode(['status' => $donation['status']]);
-    } else {
-        echo json_encode(['status' => 'not_found']);
-    }
-    exit;
-}
-
 // ── CHECK donation status (front-end polling) ─────────────────
 if ($action === 'check_status' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $donation_id = (int)($_GET['donation_id'] ?? 0);
