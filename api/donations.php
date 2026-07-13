@@ -106,75 +106,26 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 // ── CHECK donation status (front-end polling) ─────────────────
+// Simply reads DB status — IPN handler updates it when payment confirms
 if ($action === 'check_status' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $donation_id = (int)($_GET['donation_id'] ?? 0);
     if ($donation_id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'donation_id required.']);
+        echo json_encode(['status' => 'error']);
         exit;
     }
 
     $res = $conn->query(
-        "SELECT status, transaction_reference, campaign_id, amount, iotec_transaction_id
-         FROM donations WHERE donation_id = $donation_id LIMIT 1"
+        "SELECT status FROM donations WHERE donation_id = $donation_id LIMIT 1"
     );
     $don = $res ? $res->fetch_assoc() : null;
 
     if (!$don) {
-        echo json_encode(['success' => false, 'message' => 'Donation not found.']);
+        echo json_encode(['status' => 'error']);
         exit;
     }
 
-    if ($don['status'] === 'completed') {
-        echo json_encode(['success' => true, 'status' => 'completed']);
-        exit;
-    }
-    if ($don['status'] === 'failed') {
-        echo json_encode(['success' => true, 'status' => 'failed']);
-        exit;
-    }
-
-    // Still pending — ask ioTec for live status
-    require_once __DIR__ . '/../includes/iotec_functions.php';
-
-    $iotecStatus = null;
-
-    if (!empty($don['iotec_transaction_id'])) {
-        $check = checkIotecStatus($don['iotec_transaction_id']);
-        if ($check['success']) {
-            $iotecStatus = strtolower($check['status'] ?? '');
-        }
-    }
-
-    // Fallback: look up by externalId if UUID not stored
-    if ($iotecStatus === null && !empty($don['transaction_reference'])) {
-        $check2 = checkIotecStatusByExternalId($don['transaction_reference']);
-        if ($check2['success'] && !empty($check2['id'])) {
-            $rid = $conn->real_escape_string($check2['id']);
-            $conn->query("UPDATE donations SET iotec_transaction_id='$rid' WHERE donation_id=$donation_id");
-            $iotecStatus = strtolower($check2['status'] ?? '');
-        }
-    }
-
-    if ($iotecStatus === 'success') {
-        $conn->query(
-            "UPDATE donations SET status='completed', payment_date=NOW()
-             WHERE donation_id=$donation_id AND status='pending'"
-        );
-        if ($conn->affected_rows > 0) {
-            $conn->query(
-                "UPDATE campaigns
-                 SET raised_amount=raised_amount+" . (float)$don['amount'] . ",
-                     contributor_count=contributor_count+1
-                 WHERE campaign_id=" . (int)$don['campaign_id']
-            );
-        }
-        echo json_encode(['success' => true, 'status' => 'completed']);
-    } elseif ($iotecStatus === 'failed') {
-        $conn->query("UPDATE donations SET status='failed' WHERE donation_id=$donation_id");
-        echo json_encode(['success' => true, 'status' => 'failed']);
-    } else {
-        echo json_encode(['success' => true, 'status' => 'pending']);
-    }
+    // Return exactly what the DB says — IPN keeps this updated
+    echo json_encode(['status' => $don['status']]);
     exit;
 }
 
