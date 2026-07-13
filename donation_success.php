@@ -104,9 +104,6 @@ var pollCount  = 0, maxPolls = 24, pollTimer = null;
 var bar        = document.getElementById('pollBar');
 var countEl    = document.getElementById('pollCount');
 
-// Replace this page in browser history so "back" goes to the campaign, not here
-history.replaceState(null, '', '<?= BASE ?>/campaign-detail.php?id=<?= (int)$donation['campaign_id'] ?>');
-
 function animBar(){ bar.style.transition='none'; bar.style.width='0%'; setTimeout(function(){ bar.style.transition='width 4.8s linear'; bar.style.width='100%'; },50); }
 
 function showSuccess(){

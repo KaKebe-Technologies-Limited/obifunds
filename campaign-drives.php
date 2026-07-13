@@ -45,17 +45,17 @@ include __DIR__ . '/includes/header.php';
 <div style="background:#fff;border-bottom:1px solid var(--gray-200);padding:14px 0;position:sticky;top:68px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.05);">
   <div class="container">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-      <div style="position:relative;flex:1;min-width:200px;max-width:340px;">
+      <div style="position:relative;flex:1;min-width:160px;max-width:340px;">
         <i class="fas fa-search" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:.82rem;"></i>
         <input type="text" id="campaignSearch" class="form-input" placeholder="Search drives…" style="padding-left:36px;border-radius:10px;height:42px;"/>
       </div>
-      <select id="categoryFilter" class="form-input" style="max-width:160px;height:42px;border-radius:10px;">
+      <select id="categoryFilter" class="form-input" style="flex:1;min-width:120px;max-width:160px;height:42px;border-radius:10px;">
         <option value="">All Categories</option>
         <option value="family">Family</option><option value="medical">Medical</option>
         <option value="education">Education</option><option value="community">Community</option>
         <option value="business">Business</option><option value="emergency">Emergency</option>
       </select>
-      <select id="sortFilter" class="form-input" style="max-width:160px;height:42px;border-radius:10px;">
+      <select id="sortFilter" class="form-input" style="flex:1;min-width:120px;max-width:160px;height:42px;border-radius:10px;">
         <option value="newest">Newest First</option>
         <option value="funded">Most Funded</option>
         <option value="ending">Ending Soon</option>
@@ -130,8 +130,26 @@ include __DIR__ . '/includes/header.php';
 .obi-raised-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .obi-raised-amt{font-weight:800;color:var(--green-dark);font-size:.9rem;}
 .obi-raised-pct{font-size:.76rem;font-weight:700;color:var(--green);}
-@media(max-width:767px){.campaigns-grid{grid-template-columns:1fr;}}
-@media(max-width:1023px){.campaigns-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* ── Drives grid — mobile-first ── */
+#campaignsGrid.campaigns-grid {
+  display: grid;
+  grid-template-columns: 1fr;          /* mobile: 1 card full width */
+  gap: 20px;
+}
+@media(min-width:600px) {
+  #campaignsGrid.campaigns-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media(min-width:1024px) {
+  #campaignsGrid.campaigns-grid { grid-template-columns: repeat(3,1fr); }
+}
+
+/* Make cards a comfortable height on mobile */
+@media(max-width:599px) {
+  #campaignsGrid .card-img { height: 200px; object-fit: cover; }
+  #campaignsGrid .campaign-card { margin: 0; }
+  #campaignsGrid .card-body { padding: 16px; }
+}
 </style>
 <script>
 var cards = Array.from(document.querySelectorAll('.obi-drive-card'));
