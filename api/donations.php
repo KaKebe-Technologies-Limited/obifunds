@@ -72,6 +72,10 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Now update the reference to include the donation_id so it matches ioTec's externalId
+    $ref = 'DON-' . $donation_id . '-' . time();
+    $conn->query("UPDATE donations SET transaction_reference = '$ref' WHERE donation_id = $donation_id");
+
     require_once __DIR__ . '/../includes/iotec_functions.php';
 
     $description = 'Donation to campaign #' . $campaign_id;

@@ -10,205 +10,196 @@ if ($donation_id <= 0) { header('Location: '.BASE.'/index.php'); exit; }
 
 $res = $conn->query(
     "SELECT d.*, c.title AS campaign_title, c.campaign_id
-     FROM donations d JOIN campaigns c ON d.campaign_id=c.campaign_id
-     WHERE d.donation_id=$donation_id LIMIT 1"
+     FROM donations d JOIN campaigns c ON d.campaign_id = c.campaign_id
+     WHERE d.donation_id = $donation_id LIMIT 1"
 );
 $donation = $res ? $res->fetch_assoc() : null;
 if (!$donation) { header('Location: '.BASE.'/index.php'); exit; }
 
-$isPending = ($url_status==='pending' || $donation['status']==='pending');
-$isSuccess = ($donation['status']==='completed' || $url_status==='success');
+$campaignId = (int)$donation['campaign_id'];
+
+// If already completed in DB — go straight to success view
+if ($donation['status'] === 'completed') {
+    $url_status = 'success';
+}
+// If already failed — go back to campaign
+if ($donation['status'] === 'failed') {
+    header('Location: '.BASE.'/campaign-detail.php?id='.$campaignId.'&payment=failed');
+    exit;
+}
+
+$isSuccess = ($url_status === 'success');
+$isPending = !$isSuccess;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title><?= $isPending?'Processing Payment':'Thank You' ?> – ObiFunds</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title><?= $isSuccess ? 'Payment Confirmed' : 'Processing Payment' ?> – ObiFunds</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <link rel="stylesheet" href="<?= BASE ?>/css/style.css"/>
+  <style>
+    body { font-family:'Plus Jakarta Sans',sans-serif; background:#f0fdf4; min-height:100vh; margin:0; }
+    .obi-pay-wrap {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px 16px;
+    }
+    .obi-pay-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 40px 32px;
+      width: 100%; max-width: 440px;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(26,122,60,.12);
+      border: 1px solid #dde8e2;
+    }
+    .obi-icon-wrap {
+      width: 88px; height: 88px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 22px; font-size: 2.4rem;
+    }
+    .obi-pay-card h1 { font-size: 1.5rem; font-weight: 900; margin: 0 0 10px; letter-spacing: -.02em; }
+    .obi-pay-card p  { font-size: .9rem; line-height: 1.7; color: #607068; margin: 0 0 20px; }
+    .obi-progress { height: 6px; background: #e8f5ee; border-radius: 99px; overflow: hidden; margin: 0 0 20px; }
+    .obi-progress-bar { height: 100%; background: #1a7a3c; border-radius: 99px; width: 0%; transition: width 2s linear; }
+    .obi-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px; border-radius: 12px;
+      font-weight: 800; font-size: .95rem; text-decoration: none;
+      cursor: pointer; border: none; font-family: inherit;
+      margin-bottom: 10px; box-sizing: border-box;
+    }
+    .obi-btn-green { background: #1a7a3c; color: #fff; }
+    .obi-btn-outline { background: none; border: 2px solid #dde8e2; color: #607068; font-size: .85rem; }
+    .obi-ref { font-size: .74rem; color: #94a3b8; margin-top: 14px; }
+    .obi-ref code { background: #f0f4f2; padding: 2px 8px; border-radius: 6px; }
+  </style>
 </head>
-<body style="font-family:'Plus Jakarta Sans',sans-serif;background:var(--gray-50);min-height:100vh;">
-<?php include __DIR__ . '/includes/header.php'; ?>
+<body>
 
-<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:100px 16px 40px;">
-  <div class="obi-status-card" style="background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:500px;text-align:center;box-shadow:var(--shadow-lg);border:1px solid var(--gray-200);">
+<div class="obi-pay-wrap">
+  <div class="obi-pay-card" id="payCard">
 
     <?php if ($isSuccess): ?>
-      <!-- SUCCESS -->
-      <div style="width:72px;height:72px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:2rem;">🎉</div>
-      <h1 style="font-weight:900;color:var(--green-dark);font-size:1.5rem;margin-bottom:8px;letter-spacing:-.02em;">Thank You!</h1>
-      <p style="color:var(--gray-500);font-size:.92rem;margin-bottom:24px;line-height:1.6;">Your contribution has been received and confirmed. You're making a real difference.</p>
-
-    <?php else: ?>
-      <!-- PENDING — auto-polls every 5s -->
-      <div id="pendingIcon" style="width:72px;height:72px;background:var(--yellow-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:2rem;">📱</div>
-      <h1 id="pendingTitle" style="font-weight:900;color:var(--green-dark);font-size:1.4rem;margin-bottom:8px;letter-spacing:-.02em;">Check Your Phone!</h1>
-      <p id="pendingMsg" style="color:var(--gray-500);font-size:.9rem;line-height:1.65;margin-bottom:16px;">
-        A mobile money prompt has been sent to<br>
-        <strong style="color:var(--green-dark);"><?= htmlspecialchars($donation['donor_phone']) ?></strong>.<br>
-        Enter your PIN to complete the donation.
-      </p>
-      <div style="background:var(--yellow-light);border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:.8rem;color:#92400e;margin-bottom:16px;">
-        ⏱ The prompt expires in <strong>2 minutes</strong>. Checking automatically… <span id="pollCount" style="font-weight:700;"></span>
-      </div>
-      <div style="height:5px;background:var(--gray-200);border-radius:99px;overflow:hidden;margin-bottom:24px;">
-        <div id="pollBar" style="height:100%;background:var(--green);border-radius:99px;width:0%;transition:width 4.8s linear;"></div>
-      </div>
-    <?php endif; ?>
-
-    <!-- Donation summary -->
-    <div style="background:var(--gray-50);border-radius:14px;padding:16px;margin-bottom:24px;text-align:left;border:1px solid var(--gray-200);">
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);">
-        <span style="font-size:.82rem;color:var(--gray-500);">Drive</span>
-        <span style="font-size:.82rem;font-weight:700;color:var(--green-dark);text-align:right;max-width:60%;"><?= htmlspecialchars($donation['campaign_title']) ?></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);">
-        <span style="font-size:.82rem;color:var(--gray-500);">Amount</span>
-        <span style="font-size:.82rem;font-weight:800;color:var(--green);"><?= htmlspecialchars($donation['currency']??'UGX') ?> <?= number_format($donation['amount']) ?></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);">
-        <span style="font-size:.82rem;color:var(--gray-500);">Donor</span>
-        <span style="font-size:.82rem;font-weight:600;"><?= $donation['is_anonymous']?'Anonymous':htmlspecialchars($donation['donor_name']) ?></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;">
-        <span style="font-size:.82rem;color:var(--gray-500);">Reference</span>
-        <code style="font-size:.74rem;background:var(--gray-100);padding:2px 8px;border-radius:6px;"><?= htmlspecialchars($donation['transaction_reference']) ?></code>
-      </div>
+    <!-- ── ALREADY CONFIRMED ON LOAD ─────────────────────── -->
+    <div class="obi-icon-wrap" style="background:linear-gradient(135deg,#1a7a3c,#145f2e);">
+      <i class="fas fa-check" style="color:#fff;"></i>
     </div>
+    <h1 style="color:#145f2e;">Payment Confirmed! 🎉</h1>
+    <p>Your contribution of <strong style="color:#1a7a3c;"><?= $donation['currency']??'UGX' ?> <?= number_format($donation['amount']) ?></strong> has been received.<br>Thank you for making a difference!</p>
+    <p style="background:#e8f5ee;border-radius:10px;padding:10px;font-size:.82rem;color:#145f2e;font-weight:700;">
+      Returning to the drive in <span id="secs">3</span>s…
+    </p>
+    <a href="<?= BASE ?>/campaign-detail.php?id=<?= $campaignId ?>" class="obi-btn obi-btn-green">
+      <i class="fas fa-arrow-left"></i> Back to Drive
+    </a>
+    <script>
+      var s=3, t=setInterval(function(){
+        s--; var el=document.getElementById('secs'); if(el) el.textContent=s;
+        if(s<=0){ clearInterval(t); window.location.replace('<?= BASE ?>/campaign-detail.php?id=<?= $campaignId ?>'); }
+      },1000);
+    </script>
 
-    <?php if ($isSuccess): ?>
-      <a href="<?= BASE ?>/campaign-detail.php?id=<?= (int)$donation['campaign_id'] ?>"
-         style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--green);color:#fff;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.92rem;margin-bottom:10px;">
-        <i class="fas fa-arrow-left"></i> Back to Drive
-      </a>
-      <a href="<?= BASE ?>/campaign-drives.php" style="display:block;font-size:.84rem;color:var(--gray-400);text-decoration:none;margin-top:6px;">Browse more drives →</a>
     <?php else: ?>
-      <button id="checkNowBtn" onclick="checkNow()"
-        style="width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.92rem;cursor:pointer;font-family:inherit;margin-bottom:10px;">
-        <i class="fas fa-check-circle"></i> I've Paid — Confirm Now
-      </button>
-      <a href="<?= BASE ?>/campaign-detail.php?id=<?= (int)$donation['campaign_id'] ?>"
-         style="display:block;font-size:.84rem;color:var(--gray-400);text-decoration:none;">← Back to drive</a>
+    <!-- ── PENDING — polls every 2s ──────────────────────── -->
+    <div class="obi-icon-wrap" style="background:#fef9e0;" id="statusIcon">
+      <span style="font-size:2.2rem;">📱</span>
+    </div>
+    <h1 style="color:#145f2e;" id="statusTitle">Check Your Phone</h1>
+    <p id="statusMsg">
+      A payment prompt has been sent to<br>
+      <strong style="color:#1a7a3c;"><?= htmlspecialchars($donation['donor_phone']) ?></strong>.<br>
+      Enter your PIN to complete the donation.
+    </p>
+    <div class="obi-progress"><div class="obi-progress-bar" id="pbar"></div></div>
+    <button class="obi-btn obi-btn-green" id="confirmBtn" onclick="poll()">
+      <i class="fas fa-check-circle"></i> I've Paid — Confirm Now
+    </button>
+    <a href="<?= BASE ?>/campaign-detail.php?id=<?= $campaignId ?>" class="obi-btn obi-btn-outline">
+      ← Back to drive
+    </a>
+    <p class="obi-ref">Ref: <code><?= htmlspecialchars($donation['transaction_reference']) ?></code></p>
+
+    <script>
+    var donationId = <?= $donation_id ?>;
+    var campaignId = <?= $campaignId ?>;
+    var baseUrl    = '<?= BASE ?>';
+    var polling    = false;
+    var pollCount  = 0;
+    var timer      = null;
+
+    function animBar(){
+      var b = document.getElementById('pbar');
+      if(!b) return;
+      b.style.transition = 'none'; b.style.width = '0%';
+      setTimeout(function(){ b.style.transition = 'width 1.8s linear'; b.style.width = '100%'; }, 30);
+    }
+
+    function onConfirmed(){
+      // Stop all polling
+      clearInterval(timer); polling = false;
+
+      // Show success inline — no DOM manipulation tricks
+      document.getElementById('statusIcon').innerHTML = '<i class="fas fa-check" style="color:#fff;font-size:2.2rem;"></i>';
+      document.getElementById('statusIcon').style.background = 'linear-gradient(135deg,#1a7a3c,#145f2e)';
+      document.getElementById('statusTitle').textContent = 'Payment Confirmed! 🎉';
+      document.getElementById('statusMsg').innerHTML =
+        'Your contribution has been received.<br><strong style="color:#1a7a3c;">Thank you!</strong>';
+      document.getElementById('pbar').parentElement.style.display = 'none';
+      document.getElementById('confirmBtn').style.display = 'none';
+
+      // Redirect after 2 seconds
+      setTimeout(function(){
+        window.location.replace(baseUrl + '/campaign-detail.php?id=' + campaignId);
+      }, 2000);
+    }
+
+    function poll(){
+      if(polling) return;
+      polling = true;
+      var btn = document.getElementById('confirmBtn');
+      if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…'; }
+      animBar();
+
+      fetch(baseUrl + '/api/donations.php?action=check_status&donation_id=' + donationId)
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          polling = false;
+          pollCount++;
+
+          if(d.status === 'completed'){
+            onConfirmed();
+          } else if(d.status === 'failed'){
+            window.location.replace(baseUrl + '/campaign-detail.php?id=' + campaignId + '&payment=failed');
+          } else {
+            // Still pending — re-enable button
+            if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now'; }
+            if(pollCount >= 30){
+              clearInterval(timer);
+              document.getElementById('statusMsg').innerHTML =
+                'Payment is taking longer than usual.<br>If you\'ve paid, your contribution will appear shortly.';
+            }
+          }
+        })
+        .catch(function(){
+          polling = false;
+          if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now'; }
+        });
+    }
+
+    // Auto-poll every 2 seconds
+    animBar();
+    timer = setInterval(poll, 2000);
+    // Also fire immediately after 1 second
+    setTimeout(poll, 1000);
+    </script>
     <?php endif; ?>
+
   </div>
 </div>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
-<?php if ($isPending): ?>
-<script>
-var donationId  = <?= $donation_id ?>;
-var campaignId  = <?= (int)$donation['campaign_id'] ?>;
-var pollTimer   = null;
-var pollCount   = 0;
-var maxFastPolls = 15;  // poll every 2s for first 30s
-var maxPolls    = 30;   // then every 5s up to 2 min total
-var bar         = document.getElementById('pollBar');
-var countEl     = document.getElementById('pollCount');
-var alreadyDone = false;
-
-function animBar(){
-  if(!bar) return;
-  bar.style.transition='none'; bar.style.width='0%';
-  setTimeout(function(){ bar.style.transition='width 1.8s linear'; bar.style.width='100%'; },50);
-}
-
-function showSuccess(){
-  if(alreadyDone) return;
-  alreadyDone = true;
-  clearInterval(pollTimer);
-
-  // Replace entire card content
-  var card = document.querySelector('.obi-status-card');
-  if(!card) card = document.body; // fallback
-  card.innerHTML =
-    '<div style="text-align:center;padding:24px 8px;">' +
-      '<div style="width:88px;height:88px;background:linear-gradient(135deg,#1a7a3c,#145f2e);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 32px rgba(26,122,60,.35);">' +
-        '<i class="fas fa-check" style="font-size:2.4rem;color:#fff;"></i>' +
-      '</div>' +
-      '<h1 style="font-weight:900;color:#145f2e;font-size:1.6rem;margin-bottom:10px;">Payment Confirmed! 🎉</h1>' +
-      '<p style="color:#607068;font-size:.95rem;margin-bottom:6px;line-height:1.7;">Your contribution has been received.</p>' +
-      '<p style="color:#94a3b8;font-size:.84rem;margin-bottom:28px;">Thank you for making a difference!</p>' +
-      '<div style="background:#e8f5ee;border:1px solid #b6e3c8;border-radius:10px;padding:12px 16px;font-size:.84rem;color:#145f2e;margin-bottom:24px;font-weight:600;">' +
-        '⏱ Returning to the drive in <strong id="countdownSecs">3</strong>s…' +
-      '</div>' +
-      '<a href="<?= BASE ?>/campaign-detail.php?id='+campaignId+'" ' +
-        'style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1a7a3c;color:#fff;padding:14px 24px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.95rem;">' +
-        '<i class="fas fa-arrow-left"></i> Back to Drive</a>' +
-    '</div>';
-
-  var secs = 3;
-  var t = setInterval(function(){
-    secs--;
-    var cd = document.getElementById('countdownSecs');
-    if(cd) cd.textContent = secs;
-    if(secs <= 0){
-      clearInterval(t);
-      window.location.replace('<?= BASE ?>/campaign-detail.php?id=' + campaignId);
-    }
-  }, 1000);
-}
-
-function showFailed(){
-  if(alreadyDone) return;
-  alreadyDone = true;
-  clearInterval(pollTimer);
-  window.location.replace('<?= BASE ?>/campaign-detail.php?id=' + campaignId + '&payment=failed');
-}
-
-function doPoll(){
-  pollCount++;
-  animBar();
-  if(countEl) countEl.textContent = '';
-
-  fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id=' + donationId)
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(d.status === 'completed'){ showSuccess(); return; }
-      if(d.status === 'failed')   { showFailed();  return; }
-
-      // Still pending — adjust poll interval
-      clearInterval(pollTimer);
-      if(pollCount < maxFastPolls){
-        pollTimer = setInterval(doPoll, 2000);   // fast: every 2s
-      } else if(pollCount < maxPolls){
-        pollTimer = setInterval(doPoll, 5000);   // slow: every 5s
-      } else {
-        // Timed out
-        var b = document.getElementById('checkNowBtn');
-        if(b){ b.disabled=false; b.innerHTML='<i class="fas fa-sync"></i> Check Again'; }
-        if(bar && bar.parentElement) bar.parentElement.style.display='none';
-        var msg = document.getElementById('pendingMsg');
-        if(msg) msg.innerHTML='Payment is taking longer than usual. If you completed it, it will be confirmed shortly.<br><small style="color:#94a3b8;">Ref: <?= htmlspecialchars($donation['transaction_reference']) ?></small>';
-      }
-    })
-    .catch(function(){ /* network blip — keep polling */ });
-}
-
-async function checkNow(){
-  var btn = document.getElementById('checkNowBtn');
-  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Checking…'; }
-  try{
-    var r = await fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id=' + donationId);
-    var d = await r.json();
-    if(d.status === 'completed'){ showSuccess(); }
-    else if(d.status === 'failed'){ showFailed(); }
-    else{
-      if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now'; }
-    }
-  } catch(e){
-    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now'; }
-  }
-}
-
-// Start immediately — first check after 1 second, then every 2s
-animBar();
-setTimeout(function(){
-  doPoll();
-  pollTimer = setInterval(doPoll, 2000);
-}, 1000);
-</script>
-<?php endif; ?>
 </body>
 </html>
