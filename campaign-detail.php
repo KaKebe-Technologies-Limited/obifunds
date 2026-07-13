@@ -2,6 +2,31 @@
 // ============================================================
 // ObiFunds – campaign-detail.php (GoFundMe Style with Images)
 // ============================================================
+// ── Show success/error messages ──
+if (isset($_GET['payment']) && $_GET['payment'] === 'success') {
+    echo '<div class="payment-toast" style="position:fixed;top:80px;right:20px;z-index:9999;background:#d1fae5;border:1px solid #10b981;padding:16px 24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:380px;animation:slideIn 0.5s ease;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="background:#10b981;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;">✓</div>
+                <div>
+                    <p style="font-weight:700;color:#065f46;margin:0;">Payment Successful! 🎉</p>
+                    <p style="font-size:0.85rem;color:#065f46;margin:0;">Thank you for your contribution!</p>
+                </div>
+            </div>
+        </div>';
+}
+
+if (isset($_GET['payment']) && $_GET['payment'] === 'failed') {
+    echo '<div class="payment-toast" style="position:fixed;top:80px;right:20px;z-index:9999;background:#fee2e2;border:1px solid #ef4444;padding:16px 24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:380px;animation:slideIn 0.5s ease;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="background:#ef4444;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;">✕</div>
+                <div>
+                    <p style="font-weight:700;color:#991b1b;margin:0;">Payment Failed</p>
+                    <p style="font-size:0.85rem;color:#991b1b;margin:0;">Please try again.</p>
+                </div>
+            </div>
+        </div>';
+}
+
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/includes/config.php';
 
@@ -297,6 +322,12 @@ include __DIR__ . '/includes/header.php';
     overflow-x: auto;
     scrollbar-width: none;
 }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
 .campaign-images-section .thumbnails::-webkit-scrollbar {
     display: none;
 }

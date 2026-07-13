@@ -24,6 +24,21 @@ if ($status === 'failed') {
     header('Location: '.BASE.'/campaign-detail.php?id='.$cid.'&payment=failed');
     exit;
 }
+
+// ── If already completed, redirect to campaign with success ──
+if ($don['status'] === 'completed') {
+    $_SESSION['payment_success'] = 'Your donation was successful! Thank you!';
+    header('Location: ' . BASE . '/campaign-detail.php?id=' . $cid . '&payment=success');
+    exit;
+}
+
+// ── If failed, redirect to campaign with error ──
+if ($don['status'] === 'failed') {
+    $_SESSION['payment_error'] = 'Your donation was not completed. Please try again.';
+    header('Location: ' . BASE . '/campaign-detail.php?id=' . $cid . '&payment=failed');
+    exit;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
