@@ -33,7 +33,7 @@ $isSuccess = ($donation['status']==='completed' || $url_status==='success');
 <?php include __DIR__ . '/includes/header.php'; ?>
 
 <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:100px 16px 40px;">
-  <div style="background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:500px;text-align:center;box-shadow:var(--shadow-lg);border:1px solid var(--gray-200);">
+  <div class="obi-status-card" style="background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:500px;text-align:center;box-shadow:var(--shadow-lg);border:1px solid var(--gray-200);">
 
     <?php if ($isSuccess): ?>
       <!-- SUCCESS -->
@@ -98,78 +98,116 @@ $isSuccess = ($donation['status']==='completed' || $url_status==='success');
 <?php include __DIR__ . '/includes/footer.php'; ?>
 <?php if ($isPending): ?>
 <script>
-var donationId = <?= $donation_id ?>;
-var campaignId = <?= (int)$donation['campaign_id'] ?>;
-var pollCount  = 0, maxPolls = 24, pollTimer = null;
-var bar        = document.getElementById('pollBar');
-var countEl    = document.getElementById('pollCount');
+var donationId  = <?= $donation_id ?>;
+var campaignId  = <?= (int)$donation['campaign_id'] ?>;
+var pollTimer   = null;
+var pollCount   = 0;
+var maxFastPolls = 15;  // poll every 2s for first 30s
+var maxPolls    = 30;   // then every 5s up to 2 min total
+var bar         = document.getElementById('pollBar');
+var countEl     = document.getElementById('pollCount');
+var alreadyDone = false;
 
-function animBar(){ bar.style.transition='none'; bar.style.width='0%'; setTimeout(function(){ bar.style.transition='width 4.8s linear'; bar.style.width='100%'; },50); }
+function animBar(){
+  if(!bar) return;
+  bar.style.transition='none'; bar.style.width='0%';
+  setTimeout(function(){ bar.style.transition='width 1.8s linear'; bar.style.width='100%'; },50);
+}
 
 function showSuccess(){
-  // Replace the entire card with a clean success view
-  var card = document.querySelector('[style*="border-radius:24px"]');
+  if(alreadyDone) return;
+  alreadyDone = true;
+  clearInterval(pollTimer);
+
+  // Replace entire card content
+  var card = document.querySelector('.obi-status-card');
+  if(!card) card = document.body; // fallback
   card.innerHTML =
-    '<div style="text-align:center;padding:16px 0;">' +
-      '<div style="width:80px;height:80px;background:linear-gradient(135deg,#1a7a3c,#145f2e);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(26,122,60,.3);">' +
-        '<i class="fas fa-check" style="font-size:2rem;color:#fff;"></i>' +
+    '<div style="text-align:center;padding:24px 8px;">' +
+      '<div style="width:88px;height:88px;background:linear-gradient(135deg,#1a7a3c,#145f2e);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 32px rgba(26,122,60,.35);">' +
+        '<i class="fas fa-check" style="font-size:2.4rem;color:#fff;"></i>' +
       '</div>' +
-      '<h1 style="font-weight:900;color:#145f2e;font-size:1.5rem;margin-bottom:8px;">Payment Confirmed! 🎉</h1>' +
-      '<p style="color:#607068;font-size:.92rem;margin-bottom:24px;line-height:1.6;">Your contribution has been received.<br>Thank you for making a difference!</p>' +
-      '<div style="background:#e8f5ee;border:1px solid #b6e3c8;border-radius:10px;padding:10px 14px;font-size:.82rem;color:#145f2e;margin-bottom:24px;">' +
-        '⏱ Returning to the drive in <strong id="countdownSecs">4</strong>s…' +
+      '<h1 style="font-weight:900;color:#145f2e;font-size:1.6rem;margin-bottom:10px;">Payment Confirmed! 🎉</h1>' +
+      '<p style="color:#607068;font-size:.95rem;margin-bottom:6px;line-height:1.7;">Your contribution has been received.</p>' +
+      '<p style="color:#94a3b8;font-size:.84rem;margin-bottom:28px;">Thank you for making a difference!</p>' +
+      '<div style="background:#e8f5ee;border:1px solid #b6e3c8;border-radius:10px;padding:12px 16px;font-size:.84rem;color:#145f2e;margin-bottom:24px;font-weight:600;">' +
+        '⏱ Returning to the drive in <strong id="countdownSecs">3</strong>s…' +
       '</div>' +
-      '<a href="<?= BASE ?>/campaign-detail.php?id='+campaignId+'" id="backBtn" ' +
-        'style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1a7a3c;color:#fff;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.92rem;">' +
+      '<a href="<?= BASE ?>/campaign-detail.php?id='+campaignId+'" ' +
+        'style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1a7a3c;color:#fff;padding:14px 24px;border-radius:12px;font-weight:800;text-decoration:none;font-size:.95rem;">' +
         '<i class="fas fa-arrow-left"></i> Back to Drive</a>' +
     '</div>';
 
-  // Auto-redirect using replace() so back button skips this page
-  var secs = 4;
-  var cd = document.getElementById('countdownSecs');
+  var secs = 3;
   var t = setInterval(function(){
     secs--;
-    if (cd) cd.textContent = secs;
-    if (secs <= 0) {
+    var cd = document.getElementById('countdownSecs');
+    if(cd) cd.textContent = secs;
+    if(secs <= 0){
       clearInterval(t);
       window.location.replace('<?= BASE ?>/campaign-detail.php?id=' + campaignId);
     }
   }, 1000);
 }
 
-async function checkNow(){
-  var btn=document.getElementById('checkNowBtn');
-  if(btn){btn.disabled=true;btn.textContent='Checking…';}
-  try{
-    var r=await fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id='+donationId);
-    var d=await r.json();
-    if(d.status==='completed'){clearInterval(pollTimer);showSuccess();}
-    else if(d.status==='failed'){clearInterval(pollTimer);window.location.href='<?= BASE ?>/campaign-detail.php?id='+campaignId+'&payment=failed';}
-    else{if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now';}}
-  }catch(e){if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now';}}
+function showFailed(){
+  if(alreadyDone) return;
+  alreadyDone = true;
+  clearInterval(pollTimer);
+  window.location.replace('<?= BASE ?>/campaign-detail.php?id=' + campaignId + '&payment=failed');
 }
 
-function autoPoll(){
+function doPoll(){
   pollCount++;
-  if(countEl) countEl.textContent='('+pollCount+'/'+maxPolls+')';
   animBar();
-  fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id='+donationId)
-    .then(function(r){return r.json();})
+  if(countEl) countEl.textContent = '';
+
+  fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id=' + donationId)
+    .then(function(r){ return r.json(); })
     .then(function(d){
-      if(d.status==='completed'){clearInterval(pollTimer);showSuccess();}
-      else if(d.status==='failed'){clearInterval(pollTimer);window.location.href='<?= BASE ?>/campaign-detail.php?id='+campaignId+'&payment=failed';}
-      else if(pollCount>=maxPolls){
-        clearInterval(pollTimer);
-        if(countEl) countEl.textContent='';
-        document.getElementById('pendingMsg').innerHTML='Payment is taking longer than usual. If you completed it, your contribution will be confirmed shortly.<br><strong>Ref: <?= htmlspecialchars($donation['transaction_reference']) ?></strong>';
-        var b=document.getElementById('checkNowBtn');
-        if(b){b.disabled=false;b.innerHTML='<i class="fas fa-sync"></i> Check Again';}
-        bar.parentElement.style.display='none';
+      if(d.status === 'completed'){ showSuccess(); return; }
+      if(d.status === 'failed')   { showFailed();  return; }
+
+      // Still pending — adjust poll interval
+      clearInterval(pollTimer);
+      if(pollCount < maxFastPolls){
+        pollTimer = setInterval(doPoll, 2000);   // fast: every 2s
+      } else if(pollCount < maxPolls){
+        pollTimer = setInterval(doPoll, 5000);   // slow: every 5s
+      } else {
+        // Timed out
+        var b = document.getElementById('checkNowBtn');
+        if(b){ b.disabled=false; b.innerHTML='<i class="fas fa-sync"></i> Check Again'; }
+        if(bar && bar.parentElement) bar.parentElement.style.display='none';
+        var msg = document.getElementById('pendingMsg');
+        if(msg) msg.innerHTML='Payment is taking longer than usual. If you completed it, it will be confirmed shortly.<br><small style="color:#94a3b8;">Ref: <?= htmlspecialchars($donation['transaction_reference']) ?></small>';
       }
-    }).catch(function(){});
+    })
+    .catch(function(){ /* network blip — keep polling */ });
 }
+
+async function checkNow(){
+  var btn = document.getElementById('checkNowBtn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Checking…'; }
+  try{
+    var r = await fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id=' + donationId);
+    var d = await r.json();
+    if(d.status === 'completed'){ showSuccess(); }
+    else if(d.status === 'failed'){ showFailed(); }
+    else{
+      if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now'; }
+    }
+  } catch(e){
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check-circle"></i> I\'ve Paid — Confirm Now'; }
+  }
+}
+
+// Start immediately — first check after 1 second, then every 2s
 animBar();
-pollTimer=setInterval(autoPoll,5000);
+setTimeout(function(){
+  doPoll();
+  pollTimer = setInterval(doPoll, 2000);
+}, 1000);
 </script>
 <?php endif; ?>
 </body>
