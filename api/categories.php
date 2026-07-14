@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – api/categories.php
 // Admin-managed campaign categories

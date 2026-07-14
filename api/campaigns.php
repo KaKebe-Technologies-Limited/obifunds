@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – api/campaigns.php
 // CRUD for campaigns

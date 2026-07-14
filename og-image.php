@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – og-image.php
 // Clean branded OG social card  1200 × 630

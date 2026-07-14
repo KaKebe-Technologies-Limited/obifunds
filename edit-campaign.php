@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – edit-campaign.php
 // Edit an existing campaign (owner or admin only)

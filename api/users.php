@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – api/users.php
 // Profile update, user management (admin), notifications

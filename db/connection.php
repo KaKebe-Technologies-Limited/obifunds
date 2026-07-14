@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – db/connection.php
 // ============================================================
@@ -9,23 +9,11 @@ if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
     return $conn;
 }
 
-// Detect environment
-$isLocal = strpos($_SERVER['HTTP_HOST'], 'localhost') !== false ||
-           strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false;
+require_once dirname(__DIR__) . '/includes/env.php';
+loadEnvFile(dirname(__DIR__) . '/.env');
 
-if ($isLocal) {
-    $host     = 'localhost';
-    $username = 'root';
-    $password = '';
-    $database = 'obifunds';
-} else {
-    $host     = 'localhost';
-    $username = 'u850523537_VPS_ObiFundsU';
-    $password = '@Kt2026#Kakebe';
-    $database = 'u850523537_ObiFunds';
-}
-
-$conn = new mysqli($host, $username, $password, $database);
+$db = getDbCredentials();
+$conn = new mysqli($db['host'], $db['user'], $db['pass'], $db['name'], $db['port'] ?? 3306);
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);

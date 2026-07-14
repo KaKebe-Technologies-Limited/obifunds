@@ -233,4 +233,63 @@ function normalisePhone(string $phone): string {
     }
     return $phone;
 }
-?>
+
+/**
+ * Poll ioTec for pending donations and update local DB when payment settles.
+ * Needed on localhost where IPN callbacks cannot reach the app.
+ */
+function syncDonationStatusFromIotec(mysqli $conn, int $donation_id): ?string
+{
+    $res = $conn->query(
+        "SELECT donation_id, campaign_id, amount, status, transaction_reference, iotec_transaction_id
+         FROM donations WHERE donation_id = $donation_id LIMIT 1"
+    );
+    $don = $res ? $res->fetch_assoc() : null;
+    if (!$don) {
+        return null;
+    }
+
+    $status = $don['status'];
+    if ($status !== 'pending') {
+        return $status;
+    }
+
+    if (!empty($don['iotec_transaction_id'])) {
+        $check = checkIotecStatus($don['iotec_transaction_id']);
+    } else {
+        $check = checkIotecStatusByExternalId($don['transaction_reference']);
+        if ($check['success'] && !empty($check['id'])) {
+            $uuid = $conn->real_escape_string($check['id']);
+            $conn->query(
+                "UPDATE donations SET iotec_transaction_id = '$uuid' WHERE donation_id = $donation_id"
+            );
+        }
+    }
+
+    $iotecStatus = strtolower($check['status'] ?? '');
+
+    if ($iotecStatus === 'success') {
+        $conn->query(
+            "UPDATE donations SET status = 'completed', payment_date = NOW()
+             WHERE donation_id = $donation_id AND status = 'pending'"
+        );
+        if ($conn->affected_rows > 0) {
+            $amount = (float)$don['amount'];
+            $campaign_id = (int)$don['campaign_id'];
+            $conn->query(
+                "UPDATE campaigns
+                 SET raised_amount = raised_amount + $amount,
+                     contributor_count = contributor_count + 1
+                 WHERE campaign_id = $campaign_id"
+            );
+        }
+        return 'completed';
+    }
+
+    if ($iotecStatus === 'failed' || $iotecStatus === 'cancelled') {
+        $conn->query("UPDATE donations SET status = 'failed' WHERE donation_id = $donation_id");
+        return 'failed';
+    }
+
+    return 'pending';
+}

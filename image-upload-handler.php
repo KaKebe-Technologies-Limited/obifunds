@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – image-upload-handler.php
 // Handles multi-image uploads for campaigns (AJAX)

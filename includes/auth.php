@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – includes/auth.php
 // Session management & role-based access helpers

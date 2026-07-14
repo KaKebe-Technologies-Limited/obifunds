@@ -4,21 +4,28 @@
 // ============================================================
 // ── Show success/error messages ──
 if (isset($_GET['payment']) && $_GET['payment'] === 'success') {
-    echo '<div class="payment-toast" style="position:fixed;top:80px;right:20px;z-index:9999;background:#d1fae5;border:1px solid #10b981;padding:16px 24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:380px;animation:slideIn 0.5s ease;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="background:#10b981;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;">✓</div>
+    $amountMsg = '';
+    if (!empty($_GET['amount'])) {
+        $currency = htmlspecialchars($_GET['currency'] ?? 'UGX');
+        $amountMsg = ' Your contribution of <strong>' . $currency . ' ' . number_format((float)$_GET['amount']) . '</strong> has been received.';
+    }
+    echo '<div id="paymentToast" class="payment-toast" role="alert" style="position:fixed;top:80px;right:20px;z-index:9999;background:#d1fae5;border:1px solid #10b981;padding:16px 24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:380px;animation:slideIn 0.5s ease;">
+            <button type="button" onclick="dismissPaymentToast()" aria-label="Close" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#065f46;font-size:1.1rem;line-height:1;cursor:pointer;padding:4px;">&times;</button>
+            <div style="display:flex;align-items:center;gap:12px;padding-right:18px;">
+                <div style="background:#10b981;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;flex-shrink:0;">✓</div>
                 <div>
                     <p style="font-weight:700;color:#065f46;margin:0;">Payment Successful! 🎉</p>
-                    <p style="font-size:0.85rem;color:#065f46;margin:0;">Thank you for your contribution!</p>
+                    <p style="font-size:0.85rem;color:#065f46;margin:0;">Thank you for your contribution!' . $amountMsg . '</p>
                 </div>
             </div>
         </div>';
 }
 
 if (isset($_GET['payment']) && $_GET['payment'] === 'failed') {
-    echo '<div class="payment-toast" style="position:fixed;top:80px;right:20px;z-index:9999;background:#fee2e2;border:1px solid #ef4444;padding:16px 24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:380px;animation:slideIn 0.5s ease;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="background:#ef4444;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;">✕</div>
+    echo '<div id="paymentToast" class="payment-toast" role="alert" style="position:fixed;top:80px;right:20px;z-index:9999;background:#fee2e2;border:1px solid #ef4444;padding:16px 24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:380px;animation:slideIn 0.5s ease;">
+            <button type="button" onclick="dismissPaymentToast()" aria-label="Close" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#991b1b;font-size:1.1rem;line-height:1;cursor:pointer;padding:4px;">&times;</button>
+            <div style="display:flex;align-items:center;gap:12px;padding-right:18px;">
+                <div style="background:#ef4444;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;flex-shrink:0;">✕</div>
                 <div>
                     <p style="font-weight:700;color:#991b1b;margin:0;">Payment Failed</p>
                     <p style="font-size:0.85rem;color:#991b1b;margin:0;">Please try again.</p>
@@ -326,6 +333,10 @@ include __DIR__ . '/includes/header.php';
 @keyframes slideIn {
     from { opacity: 0; transform: translateX(40px); }
     to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(40px); }
 }
 
 .campaign-images-section .thumbnails::-webkit-scrollbar {
@@ -1176,7 +1187,7 @@ footer, .footer, .site-footer, #footer {
         <div class="summary-row summary-total"><span>Total</span><strong id="summaryTotal">UGX 0</strong></div>
       </div>
 
-      <div id="widgetError" style="background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:10px;font-size:.84rem;display:none;margin-bottom:10px;border-left:3px solid #ef4444;"></div>
+      <div id="modalError" style="background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:10px;font-size:.84rem;display:none;margin-bottom:10px;border-left:3px solid #ef4444;"></div>
 
       <button class="modal-submit-btn" id="modalSubmitBtn">
         <i class="fas fa-heart"></i> Donate <span id="submitAmountText">UGX 0</span>
@@ -1284,7 +1295,7 @@ function resetModal() {
     document.getElementById('modalStep2').style.display   = 'none';
     document.getElementById('modalLoading').style.display = 'none';
     document.getElementById('modalAmountError').style.display = 'none';
-    document.getElementById('widgetError').style.display  = 'none';
+    document.getElementById('modalError').style.display  = 'none';
     document.querySelectorAll('.mq-btn').forEach(b => b.classList.remove('selected'));
     document.getElementById('modalCustomAmount').style.display = 'none';
     document.getElementById('modalCustomAmount').value = '';
@@ -1310,7 +1321,7 @@ function updateSummary(amount) {
 function goBackToStep1() {
     document.getElementById('modalStep2').style.display = 'none';
     document.getElementById('modalStep1').style.display = 'block';
-    document.getElementById('widgetError').style.display = 'none';
+    document.getElementById('modalError').style.display = 'none';
 }
 
 // ── Step 1: Modal Quick Pills ─────────────────────────────────
@@ -1396,7 +1407,7 @@ document.getElementById('modalSubmitBtn').addEventListener('click', async functi
     if (!ok) return;
 
     this.disabled = true;
-    document.getElementById('widgetError').style.display = 'none';
+    document.getElementById('modalError').style.display = 'none';
     document.getElementById('modalStep2').style.display  = 'none';
     document.getElementById('modalLoading').style.display = 'block';
 
@@ -1418,8 +1429,8 @@ document.getElementById('modalSubmitBtn').addEventListener('click', async functi
         catch(pe) {
             document.getElementById('modalLoading').style.display  = 'none';
             document.getElementById('modalStep2').style.display    = 'block';
-            document.getElementById('widgetError').textContent     = 'Server error — please try again.';
-            document.getElementById('widgetError').style.display   = 'block';
+            document.getElementById('modalError').textContent     = 'Server error — please try again.';
+            document.getElementById('modalError').style.display   = 'block';
             console.error('Non-JSON from donations API:', text);
             document.getElementById('modalSubmitBtn').disabled = false;
             return;
@@ -1428,19 +1439,19 @@ document.getElementById('modalSubmitBtn').addEventListener('click', async functi
         document.getElementById('modalLoading').style.display = 'none';
 
         if (data.success && data.pending) {
-            // Use replace() so browser back button skips this and goes to campaign page
-            window.location.replace('<?= BASE ?>/donation_success.php?donation_id=' + data.donation_id + '&status=pending');
+            closeDonationModal();
+            window.location.replace('<?= BASE ?>/campaign-detail.php?id=<?= $cid ?>&donation_id=' + data.donation_id);
         } else {
             document.getElementById('modalStep2').style.display  = 'block';
-            document.getElementById('widgetError').textContent   = data.message || 'Payment failed. Please try again.';
-            document.getElementById('widgetError').style.display = 'block';
+            document.getElementById('modalError').textContent   = data.message || 'Payment failed. Please try again.';
+            document.getElementById('modalError').style.display = 'block';
             document.getElementById('modalSubmitBtn').disabled = false;
         }
     } catch (ex) {
         document.getElementById('modalLoading').style.display  = 'none';
         document.getElementById('modalStep2').style.display    = 'block';
-        document.getElementById('widgetError').textContent     = 'Could not reach the server. Check your connection and try again.';
-        document.getElementById('widgetError').style.display   = 'block';
+        document.getElementById('modalError').textContent     = 'Could not reach the server. Check your connection and try again.';
+        document.getElementById('modalError').style.display   = 'block';
         document.getElementById('modalSubmitBtn').disabled = false;
     }
 });
@@ -1480,6 +1491,84 @@ function shareCampaign() {
         toggleSharePanel();
     }
 }
+
+// ── Auto-dismiss payment toast ────────────────────────────────
+function dismissPaymentToast() {
+    var toast = document.getElementById('paymentToast');
+    if (!toast || toast.dataset.dismissing === '1') return;
+    toast.dataset.dismissing = '1';
+    toast.style.animation = 'slideOut 0.4s ease forwards';
+    setTimeout(function() {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+        var params = new URLSearchParams(window.location.search);
+        params.delete('payment');
+        params.delete('amount');
+        params.delete('currency');
+        params.delete('donation_id');
+        var q = params.toString();
+        var url = window.location.pathname + (q ? '?' + q : '');
+        window.history.replaceState({}, '', url);
+    }, 400);
+}
+
+(function() {
+    var toast = document.getElementById('paymentToast');
+    if (toast) setTimeout(dismissPaymentToast, 5000);
+})();
+
+// ── Poll payment status when returning from donation ──────────
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var donationId = parseInt(params.get('donation_id') || '0', 10);
+    if (!donationId) return;
+
+    var banner = document.createElement('div');
+    banner.id = 'paymentPendingBanner';
+    banner.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#fef9e0;border:1px solid #f5c518;padding:14px 22px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:420px;width:calc(100% - 32px);text-align:center;';
+    banner.innerHTML = '<p style="font-weight:800;color:#145f2e;margin:0 0 4px;">Check your phone</p><p style="font-size:.85rem;color:#607068;margin:0;">Enter your mobile money PIN to confirm the payment.</p>';
+    document.body.appendChild(banner);
+
+    var polls = 0;
+    var maxPolls = 60;
+    var busy = false;
+
+    function finishSuccess(data) {
+        if (banner.parentNode) banner.parentNode.removeChild(banner);
+        var q = 'id=<?= $cid ?>&payment=success';
+        if (data.amount) q += '&amount=' + encodeURIComponent(data.amount);
+        if (data.currency) q += '&currency=' + encodeURIComponent(data.currency);
+        window.location.replace('<?= BASE ?>/campaign-detail.php?' + q);
+    }
+
+    function pollStatus() {
+        if (busy) return;
+        busy = true;
+        fetch('<?= BASE ?>/api/donations.php?action=check_status&donation_id=' + donationId)
+            .then(function(r) { return r.text(); })
+            .then(function(text) {
+                busy = false;
+                polls++;
+                var data;
+                try { data = JSON.parse(text.replace(/^\uFEFF+/, '')); }
+                catch (e) { return; }
+
+                if (data.status === 'completed') {
+                    finishSuccess(data);
+                } else if (data.status === 'failed') {
+                    if (banner.parentNode) banner.parentNode.removeChild(banner);
+                    window.location.replace('<?= BASE ?>/campaign-detail.php?id=<?= $cid ?>&payment=failed');
+                } else if (polls >= maxPolls) {
+                    banner.innerHTML = '<p style="font-weight:800;color:#145f2e;margin:0 0 4px;">Payment processing</p><p style="font-size:.85rem;color:#607068;margin:0;">If you completed payment, your contribution will appear shortly.</p>';
+                }
+            })
+            .catch(function() { busy = false; });
+    }
+
+    setTimeout(function() {
+        pollStatus();
+        setInterval(pollStatus, 2000);
+    }, 1000);
+})();
 </script>
 
 </body>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – test-iotec.php
 // Sandbox test page for ioTec Pay integration

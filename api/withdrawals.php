@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – api/withdrawals.php
 // Request, list, approve/reject withdrawals

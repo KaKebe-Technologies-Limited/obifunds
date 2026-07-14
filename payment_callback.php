@@ -43,8 +43,7 @@ if (!empty($transaction_id) && ($db_status === 'pending')) {
 
 // ── Route based on status ─────────────────────────────────────
 if ($db_status === 'completed' || $url_status === 'completed' || $url_status === 'success') {
-    // If IPN already confirmed it, or URL says success
-    header('Location: ' . BASE . '/donation_success.php?donation_id=' . $donation_id . '&status=success');
+    header('Location: ' . BASE . '/campaign-detail.php?id=' . $campaign_id . '&payment=success');
     exit;
 }
 
@@ -54,5 +53,5 @@ if ($url_status === 'failed' || $url_status === 'cancelled' || $db_status === 'f
 }
 
 // Pending / unknown — show processing page
-header('Location: ' . BASE . '/donation_success.php?donation_id=' . $donation_id . '&status=pending');
+header('Location: ' . BASE . '/campaign-detail.php?id=' . $campaign_id . '&donation_id=' . $donation_id);
 exit;

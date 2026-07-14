@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – includes/iotec_config.php
 // ioTec Pay Configuration
@@ -18,7 +18,9 @@ define('IOTEC_LIVE_WALLET_ID', '019f37d2-82a0-721e-8d72-7fd11d81368a');  // ← 
 
 // ── Environment ───────────────────────────────────────────────
 // true = sandbox/testing   false = live/production
-define('IOTEC_SANDBOX', false);   // ✅ LIVE — https://obifunds.com
+$isLocalIotec = strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false ||
+                strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false;
+define('IOTEC_SANDBOX', $isLocalIotec);
 
 // ── API Base URLs (correct endpoints from official docs) ──────
 define('IOTEC_AUTH_URL', 'https://id.iotec.io/connect/token');   // OAuth token endpoint
@@ -50,4 +52,3 @@ if (!defined('IOTEC_CALLBACK_URL')) {
         : 'https://obifunds.com/ipn_handler.php'
     );
 }
-?>

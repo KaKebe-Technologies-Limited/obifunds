@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // fix-image-urls.php — ONE-TIME script
 // Fixes image URLs stored as absolute localhost/full-domain

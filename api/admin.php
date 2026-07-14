@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ============================================================
 // ObiFunds – api/admin.php
 // Admin stats, settings, countries management

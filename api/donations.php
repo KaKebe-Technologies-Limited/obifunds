@@ -9,11 +9,18 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Auto-add iotec_transaction_id column if missing (safe to run every request)
-$conn->query(
-    "ALTER TABLE donations ADD COLUMN IF NOT EXISTS
-     iotec_transaction_id VARCHAR(100) NULL DEFAULT NULL"
+// Ensure iotec_transaction_id column exists (MySQL 8 lacks ADD COLUMN IF NOT EXISTS)
+$colCheck = $conn->query(
+    "SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'donations'
+       AND COLUMN_NAME = 'iotec_transaction_id'"
 );
+if ($colCheck && (int)$colCheck->fetch_assoc()['c'] === 0) {
+    $conn->query(
+        "ALTER TABLE donations ADD COLUMN iotec_transaction_id VARCHAR(100) NULL DEFAULT NULL"
+    );
+}
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -106,7 +113,6 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 // ── CHECK donation status (front-end polling) ─────────────────
-// Simply reads DB status — IPN handler updates it when payment confirms
 if ($action === 'check_status' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $donation_id = (int)($_GET['donation_id'] ?? 0);
     if ($donation_id <= 0) {
@@ -114,18 +120,26 @@ if ($action === 'check_status' && $_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
 
-    $res = $conn->query(
-        "SELECT status FROM donations WHERE donation_id = $donation_id LIMIT 1"
-    );
-    $don = $res ? $res->fetch_assoc() : null;
+    require_once __DIR__ . '/../includes/iotec_functions.php';
+    $status = syncDonationStatusFromIotec($conn, $donation_id);
 
-    if (!$don) {
+    if ($status === null) {
         echo json_encode(['status' => 'error']);
         exit;
     }
 
-    // Return exactly what the DB says — IPN keeps this updated
-    echo json_encode(['status' => $don['status']]);
+    $payload = ['status' => $status];
+    if ($status === 'completed') {
+        $info = $conn->query(
+            "SELECT amount, currency FROM donations WHERE donation_id = $donation_id LIMIT 1"
+        )->fetch_assoc();
+        if ($info) {
+            $payload['amount'] = (float)$info['amount'];
+            $payload['currency'] = $info['currency'] ?: 'UGX';
+        }
+    }
+
+    echo json_encode($payload);
     exit;
 }
 

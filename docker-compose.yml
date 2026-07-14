@@ -1,0 +1,22 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: obifunds-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: obifunds
+      MYSQL_USER: obifunds
+      MYSQL_PASSWORD: ${DB_PASSWORD:-obifunds}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    volumes:
+      - obifunds_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uobifunds", "-p${DB_PASSWORD:-obifunds}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  obifunds_mysql_data:
