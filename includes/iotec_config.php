@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // ============================================================
 // ObiFunds – includes/iotec_config.php
 // ioTec Pay Configuration
@@ -17,10 +17,23 @@ define('IOTEC_TEST_WALLET_ID', '019f314e-fa12-764a-b7a5-be6c5938974d');
 define('IOTEC_LIVE_WALLET_ID', '019f37d2-82a0-721e-8d72-7fd11d81368a');  // ← Paste UUID from pay.iotec.io when ready
 
 // ── Environment ───────────────────────────────────────────────
-// true = sandbox/testing   false = live/production
+// Production (obifunds.com): always LIVE wallet + UGX
+// Local dev: set IOTEC_SANDBOX=true in .env (defaults to sandbox on localhost)
 $isLocalIotec = strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false ||
                 strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false;
-define('IOTEC_SANDBOX', $isLocalIotec);
+
+if ($isLocalIotec) {
+    if (!function_exists('loadEnvFile')) {
+        require_once __DIR__ . '/env.php';
+    }
+    if (!array_key_exists('IOTEC_SANDBOX', $_ENV)) {
+        loadEnvFile(dirname(__DIR__) . '/.env');
+    }
+    $iotecSandboxEnv = envValue('IOTEC_SANDBOX', 'true');
+    define('IOTEC_SANDBOX', filter_var($iotecSandboxEnv, FILTER_VALIDATE_BOOLEAN));
+} else {
+    define('IOTEC_SANDBOX', false);
+}
 
 // ── API Base URLs (correct endpoints from official docs) ──────
 define('IOTEC_AUTH_URL', 'https://id.iotec.io/connect/token');   // OAuth token endpoint
